@@ -5,16 +5,16 @@ use crate::{
   parser::AstNode,
 };
 
-use super::{number_literal, unary_operation};
+use super::{number_literal};
 
 #[derive(Debug)]
-pub struct BinaryOperation {
+pub struct BinaryExpression {
   pub operator: String,
   pub left: Box<AstNode>,
   pub right: Box<AstNode>,
 }
 
-impl BinaryOperation {
+impl BinaryExpression {
   pub fn parse<
     'a,
     O: Fn(&str) -> bool,
@@ -35,7 +35,7 @@ impl BinaryOperation {
 
           lexer.consume();
 
-          left = AstNode::BinaryOperation(BinaryOperation {
+          left = AstNode::BinaryOperation(BinaryExpression {
             operator,
             left: Box::from(left),
             right: Box::from(get_right(lexer).expect("Falta expressão da direita!")),
@@ -73,11 +73,11 @@ pub fn term(lexer: &mut Consumer<Token>) -> Option<AstNode> {
 }
 
 pub fn power_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| matches!(op, "**"), term, term);
+  return BinaryExpression::parse(lexer, |op| matches!(op, "**"), term, term);
 }
 
 pub fn multiply_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(
+  return BinaryExpression::parse(
     lexer,
     |op| matches!(op, "*" | "/" | "%"),
     power_operation,
@@ -86,7 +86,7 @@ pub fn multiply_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
 }
 
 pub fn add_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(
+  return BinaryExpression::parse(
     lexer,
     |op| matches!(op, "+" | "-"),
     multiply_operation,
@@ -95,7 +95,7 @@ pub fn add_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
 }
 
 pub fn logical_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(
+  return BinaryExpression::parse(
     lexer,
     |op| matches!(op, "<" | "<=" | ">" | ">="),
     add_operation,
@@ -104,7 +104,7 @@ pub fn logical_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
 }
 
 pub fn equality_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(
+  return BinaryExpression::parse(
     lexer,
     |op| matches!(op, "==" | "!="),
     logical_operation,
@@ -113,17 +113,21 @@ pub fn equality_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
 }
 
 pub fn bitwise_and_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| op == "&", equality_operation, term);
+  return BinaryExpression::parse(lexer, |op| op == "&", equality_operation, term);
 }
+
 pub fn bitwise_xor_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| op == "^", bitwise_and_operation, term);
+  return BinaryExpression::parse(lexer, |op| op == "^", bitwise_and_operation, term);
 }
+
 pub fn bitwise_or_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| op == "|", bitwise_xor_operation, term);
+  return BinaryExpression::parse(lexer, |op| op == "|", bitwise_xor_operation, term);
 }
+
 pub fn and_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| op == "&&", bitwise_or_operation, term);
+  return BinaryExpression::parse(lexer, |op| op == "&&", bitwise_or_operation, term);
 }
+
 pub fn or_operation(lexer: &mut Consumer<Token>) -> Option<AstNode> {
-  return BinaryOperation::parse(lexer, |op| op == "||", and_operation, term);
+  return BinaryExpression::parse(lexer, |op| op == "||", and_operation, term);
 }

@@ -26,7 +26,7 @@ impl Lexer {
 
         self.location.column += 1;
 
-        return Some(Token::Ignore);
+        return Some(Token::WhiteSpace(c.to_string(), self.location));
       }
 
       // Identifiers
@@ -46,8 +46,13 @@ impl Lexer {
         }
 
         return match id.as_str() {
-          "let" | "const" | "fn" | "break" | "continue" | "if" | "else" | "return" => {
-            Some(Token::Keyword(id, self.location))
+          "let" => Some(Token::Keyword(id, self.location)),
+          "await" | "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger"
+          | "default" | "delete" | "do" | "else" | "enum" | "export" | "extends" | "false"
+          | "finally" | "for" | "function" | "if" | "import" | "in" | "instanceof" | "new"
+          | "null" | "return" | "super" | "switch" | "this" | "throw" | "true" | "try"
+          | "typeof" | "var" | "void" | "while" | "with" | "yield  | " => {
+            Some(Token::Reserved(id, self.location))
           }
           _ => Some(Token::Identifier(id, self.location)),
         };
@@ -134,6 +139,9 @@ impl Lexer {
         return Some(Token::Operator(op, self.location));
       }
 
+      // :
+      ':' => Some(Token::Punctuation(c.to_string(), self.location)),
+
       // Number literal
       c if c.is_numeric() => {
         let mut number_literal = String::from(c);
@@ -214,7 +222,9 @@ impl Iterator for Lexer {
   fn next(&mut self) -> Option<Self::Item> {
     loop {
       match self.read_next_token() {
-        Some(Token::Ignore) => continue,
+        Some(Token::Invalid(ch, loc)) => panic!("Token \"{}\" inválido em {}", ch, loc),
+        Some(Token::Reserved(ch, loc)) => panic!("Token \"{}\" em {} é reservado!", ch, loc),
+        Some(Token::WhiteSpace(_, _)) => continue,
         Some(token) => return Some(token),
         _ => return None,
       }

@@ -1,10 +1,12 @@
 use super::nodes::{
-  binary_operation::BinaryOperation, number_literal::NumberLiteral, unary_operation::UnaryOperation,
+  binary_expression::BinaryExpression, number_literal::NumberLiteral, unary_expression::UnaryExpression, assign_expression::AssignExpression, ternary_expression::TernaryExpression,
 };
 
 #[derive(Debug)]
 pub enum AstNode {
-  UnaryOperation(UnaryOperation),
-  BinaryOperation(BinaryOperation),
+  UnaryOperation(UnaryExpression),
+  BinaryOperation(BinaryExpression),
   NumberLiteral(NumberLiteral),
+  TernaryExpression(TernaryExpression),
+  AssignExpression(AssignExpression)
 }
