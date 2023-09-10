@@ -5,6 +5,8 @@ use std::{
   io::{BufRead, BufReader},
 };
 
+pub type Code = Consumer<char>;
+
 #[derive(Debug)]
 pub struct FileReader {
   reader: BufReader<File>,
@@ -43,10 +45,6 @@ impl Iterator for FileReader {
   }
 }
 
-pub fn from_file(file: File) -> Consumer<char> {
+pub fn from_file(file: File) -> Code {
   return Consumer::new(FileReader::new(file));
 }
-
-// pub fn from_str<'a>(code: &'a str) -> Code<'a> {
-//   Code::new(code.chars())
-// }

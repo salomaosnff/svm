@@ -1,9 +1,9 @@
-pub struct Consumer<T> {
+pub struct Consumer<T: PartialEq> {
   reader: Box<dyn Iterator<Item = T> + 'static>,
   queue: Vec<T>,
 }
 
-impl<T> Consumer<T> {
+impl<T: PartialEq> Consumer<T> {
   pub fn new(reader: impl Iterator<Item = T> + 'static) -> Self {
     let mut instance = Self {
       reader: Box::new(reader),
@@ -43,6 +43,10 @@ impl<T> Consumer<T> {
     return None;
   }
 
+  pub fn consume_equal(&mut self, expected: T) -> Option<T> {
+    return self.consume_if(|c| *c == expected);
+  }
+
   pub fn consume_if<U: FnOnce(&T) -> bool>(&mut self, condition: U) -> Option<T> {
     if self.lookahead_is(condition) {
       return self.consume();
@@ -65,7 +69,7 @@ impl<T> Consumer<T> {
   }
 }
 
-impl<T> Iterator for Consumer<T> {
+impl<T: PartialEq> Iterator for Consumer<T> {
   type Item = T;
 
   fn next(&mut self) -> Option<Self::Item> {

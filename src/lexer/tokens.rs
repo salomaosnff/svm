@@ -1,26 +1,23 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 
 pub struct Location {
   pub column: usize,
   pub row: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
   Keyword(String, Location),
-  Identifier(String, Location),
+  IdentifierName(String, Location),
+  Punctuator(String, Location),
+  NumericLiteral(String, Location),
   StringLiteral(String, Location),
-  NumberLiteral(String, Location),
-  Operator(String, Location),
-  AssignOperator(String, Location),
-  IncrementOperator(String, Location),
-  Punctuation(String, Location),
-  Delimiter(String, Location),
+
   WhiteSpace(String, Location),
-  Invalid(char, Location),
   Reserved(String, Location),
+  Invalid(char, Location),
 }
 
 impl Display for Location {

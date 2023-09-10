@@ -1,13 +1,15 @@
-use super::{consumer::Consumer, Location, Token};
+use super::{code::Code, consumer::Consumer, Location, Token};
 
-pub struct Lexer {
+pub type Lexer = Consumer<Token>;
+
+struct Tokenizer {
   code: Consumer<char>,
   location: Location,
 }
 
-impl Lexer {
-  pub fn new(consumer: Consumer<char>) -> Lexer {
-    Lexer {
+impl Tokenizer {
+  pub fn new(consumer: Consumer<char>) -> Tokenizer {
+    Tokenizer {
       code: consumer,
       location: Location { column: 0, row: 1 },
     }
@@ -46,15 +48,16 @@ impl Lexer {
         }
 
         return match id.as_str() {
-          "let" => Some(Token::Keyword(id, self.location)),
-          "await" | "break" | "case" | "catch" | "class" | "const" | "continue" | "debugger"
-          | "default" | "delete" | "do" | "else" | "enum" | "export" | "extends" | "false"
-          | "finally" | "for" | "function" | "if" | "import" | "in" | "instanceof" | "new"
-          | "null" | "return" | "super" | "switch" | "this" | "throw" | "true" | "try"
-          | "typeof" | "var" | "void" | "while" | "with" | "yield  | " => {
+          "let" | "this" | "null" | "true" | "false" | "function" | "const" => {
+            Some(Token::Keyword(id, self.location))
+          }
+          "await" | "break" | "case" | "catch" | "class" | "continue" | "debugger" | "default"
+          | "delete" | "do" | "else" | "enum" | "export" | "extends" | "finally" | "for" | "if"
+          | "import" | "in" | "instanceof" | "new" | "return" | "super" | "switch" | "throw"
+          | "try" | "typeof" | "var" | "void" | "while" | "with" | "yield  | " => {
             Some(Token::Reserved(id, self.location))
           }
-          _ => Some(Token::Identifier(id, self.location)),
+          _ => Some(Token::IdentifierName(id, self.location)),
         };
       }
 
@@ -85,62 +88,156 @@ impl Lexer {
         Some(Token::StringLiteral(str_literal, self.location))
       }
 
-      // Operators
-      '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | '~' | '<' | '>' | '!' | '?' => {
-        let mut op = String::from(c);
-
-        // ++, --
-        if (op == "+" || op == "-") && self.code.consume_if(|c| c.to_string() == op).is_some() {
-          return Some(Token::IncrementOperator(op.repeat(2), self.location));
-        }
-
-        // **, ||, &&, <<, >>, ??
-        if (op == "*" || op == "|" || op == "&" || op == "<" || op == ">" || op == "?")
-          && self.code.consume_if(|c| c.to_string() == op).is_some()
-        {
-          op.push_str(&op.clone());
-        }
-
-        let equals_char = self.code.consume_if(|c| c.to_string() == "=");
-
-        // >=, <=, !=
-        if (op == "<" || op == ">" || op == "!") && equals_char.is_some() {
-          op.push(equals_char.unwrap());
-          return Some(Token::Operator(op, self.location));
-        }
-
-        // +=, -=, *=, /=, %=, |=, &=, ^=, ~=, **=, <<=, >>=, &&=, ||=, ??=
-        if (op == "+"
-          || op == "-"
-          || op == "*"
-          || op == "/"
-          || op == "%"
-          || op == "|"
-          || op == "&"
-          || op == "^"
-          || op == "~"
-          || op == "**"
-          || op == "<<"
-          || op == ">>"
-          || op == "&&"
-          || op == "||"
-          || op == "??")
-          && equals_char.is_some()
-        {
-          op.push(equals_char.unwrap());
-          return Some(Token::AssignOperator(op, self.location));
-        }
-
-        // ?, !
-        if op == "?" || op == "!" {
-          return Some(Token::Punctuation(op, self.location));
-        }
-
-        return Some(Token::Operator(op, self.location));
+      // Puntuactors
+      '{' | '}' | '(' | ')' | '[' | ']' | ':' | '~' | ',' => {
+        Some(Token::Punctuator(c.to_string(), self.location))
       }
 
-      // :
-      ':' => Some(Token::Punctuation(c.to_string(), self.location)),
+      '.' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == ".").is_some() {
+          p.push('.');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '%' | '^' | '/' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '<' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == "<").is_some() {
+          p.push('<');
+
+          if self.code.consume_if(|c| c.to_string() == "<").is_some() {
+            p.push('<');
+          }
+        }
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '>' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == ">").is_some() {
+          p.push('>');
+
+          if self.code.consume_if(|c| c.to_string() == ">").is_some() {
+            p.push('>');
+
+            if self.code.consume_if(|c| c.to_string() == ">").is_some() {
+              p.push('>');
+            }
+          }
+        }
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '+' | '-' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|ch| *ch == c).is_some() {
+          p.push(c);
+        } else if self.code.consume_if(|ch| *ch == '=').is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '*' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == "*").is_some() {
+          p.push('*');
+        }
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '&' | '|' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|ch| *ch == c).is_some() {
+          p.push(c);
+        }
+
+        if self.code.consume_if(|ch| ch.to_string() == "=").is_some() {
+          p.push('=');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '!' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+
+          if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+            p.push('=');
+          }
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '?' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == ".").is_some() {
+          p.push('.');
+        } else if self.code.consume_if(|c| c.to_string() == "?").is_some() {
+          p.push('?');
+
+          if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+            p.push('=');
+          }
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
+
+      '=' => {
+        let mut p = String::from(c);
+
+        if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+          p.push('=');
+
+          if self.code.consume_if(|c| c.to_string() == "=").is_some() {
+            p.push('=');
+          }
+        } else if self.code.consume_if(|c| c.to_string() == ">").is_some() {
+          p.push('>');
+        }
+
+        Some(Token::Punctuator(p, self.location))
+      }
 
       // Number literal
       c if c.is_numeric() => {
@@ -156,21 +253,23 @@ impl Lexer {
               // Binary Literal
               'b' => self
                 .code
-                .consume_while(|ch| matches!(ch, '0' | '1'))
+                .consume_while(|ch| matches!(ch, '0' | '1' | '_'))
                 .into_iter()
                 .collect::<String>(),
 
               // Octal Literal
               'o' => self
                 .code
-                .consume_while(|ch| matches!(ch, '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7'))
+                .consume_while(|ch| {
+                  matches!(ch, '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '_')
+                })
                 .into_iter()
                 .collect::<String>(),
 
               // Hex literal
               'x' => self
                 .code
-                .consume_while(|ch| ch.is_ascii_hexdigit())
+                .consume_while(|ch| ch.is_ascii_hexdigit() || *ch == '_')
                 .into_iter()
                 .collect::<String>(),
 
@@ -201,14 +300,8 @@ impl Lexer {
           );
         }
 
-        return Some(Token::NumberLiteral(number_literal, self.location));
+        return Some(Token::NumericLiteral(number_literal, self.location));
       }
-
-      // Punctuation
-      '.' | ',' | ';' => Some(Token::Punctuation(c.to_string(), self.location)),
-
-      // Delimiter
-      '(' | ')' | '[' | ']' | '{' | '}' => Some(Token::Delimiter(c.to_string(), self.location)),
 
       // Invalid
       c => Some(Token::Invalid(c, self.location)),
@@ -216,14 +309,16 @@ impl Lexer {
   }
 }
 
-impl Iterator for Lexer {
+impl Iterator for Tokenizer {
   type Item = Token;
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
       match self.read_next_token() {
         Some(Token::Invalid(ch, loc)) => panic!("Token \"{}\" inválido em {}", ch, loc),
-        Some(Token::Reserved(ch, loc)) => panic!("Token \"{}\" em {} é reservado!", ch, loc),
+        Some(Token::Reserved(ch, loc)) => {
+          panic!("Token \"{}\" em {} é reservado!", ch, loc)
+        }
         Some(Token::WhiteSpace(_, _)) => continue,
         Some(token) => return Some(token),
         _ => return None,
@@ -232,6 +327,6 @@ impl Iterator for Lexer {
   }
 }
 
-pub fn from_code(code: Consumer<char>) -> Consumer<Token> {
-  return Consumer::new(Lexer::new(code));
+pub fn from_code(code: Code) -> Lexer {
+  return Consumer::new(Tokenizer::new(code));
 }

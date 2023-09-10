@@ -1,7 +1,3 @@
-             xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                      
-
-
-
-
-       ¨
+function print(msg) {
+  let x = 1
+}
