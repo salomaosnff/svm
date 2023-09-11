@@ -5,7 +5,7 @@ use crate::{
 
 use super::{left_hand_side, unary};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UpdateExpression {
   pub operator: String,
   pub prefix: bool,
@@ -33,7 +33,7 @@ impl UpdateExpression {
 fn post_increment(lexer: &mut Lexer) -> Option<AstNode> {
   let mut left = left_hand_side::parse(lexer)?;
 
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p == "++" || p == "--" => {
       let op = p.clone();
       lexer.consume();
@@ -46,7 +46,7 @@ fn post_increment(lexer: &mut Lexer) -> Option<AstNode> {
 }
 
 fn pre_increment(lexer: &mut Lexer) -> Option<AstNode> {
-  return match lexer.lookahead() {
+  return match lexer.peek() {
     Some(Token::Punctuator(p, _)) if matches!(p.as_str(), "++" | "--") => {
       let op = p.clone();
       lexer.consume();

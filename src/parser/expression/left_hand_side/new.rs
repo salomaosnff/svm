@@ -3,7 +3,7 @@ use crate::{
   parser::{expression::member, AstNode},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NewExpression {
   pub callee: Box<AstNode>,
 }
@@ -20,7 +20,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let mut exp = member::parse(lexer)?;
 
   loop {
-    match lexer.lookahead() {
+    match lexer.peek() {
       Some(Token::Keyword(lexeme, _)) if lexeme == "new" => {
         lexer.consume();
 

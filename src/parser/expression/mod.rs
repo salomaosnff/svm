@@ -1,8 +1,9 @@
 use crate::lexer::Lexer;
 
-use super::{operators, AstNode};
+use super::AstNode;
 
 pub mod arithmetic;
+pub mod assignment;
 pub mod binary;
 pub mod bitwise;
 pub mod coalesce;
@@ -21,5 +22,5 @@ pub mod update;
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   // TODO: (expression, expression*)
-  return operators::assignment::parse(lexer);
+  return assignment::parse(lexer);
 }

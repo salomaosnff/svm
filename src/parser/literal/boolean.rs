@@ -3,14 +3,14 @@ use crate::{
   parser::AstNode,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BooleanLiteral {
   True,
   False,
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return match lexer.lookahead() {
+  return match lexer.peek() {
     Some(Token::Keyword(lexeme, _)) if lexeme == "true" => {
       lexer.consume();
       return Some(AstNode::BooleanLiteral(BooleanLiteral::True));

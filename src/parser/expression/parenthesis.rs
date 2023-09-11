@@ -1,10 +1,12 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{operators::assignment, AstNode},
+  parser::AstNode,
 };
 
+use super::assignment;
+
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p == "(" => {
       lexer.consume();
       let expression = assignment::parse(lexer).expect("Expected expression after '('");

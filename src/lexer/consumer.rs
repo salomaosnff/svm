@@ -22,12 +22,12 @@ impl<T: PartialEq> Consumer<T> {
     }
   }
 
-  pub fn lookahead(&self) -> Option<&T> {
+  pub fn peek(&self) -> Option<&T> {
     return self.queue.get(0);
   }
 
   pub fn lookahead_is<U: FnOnce(&T) -> bool>(&mut self, condition: U) -> bool {
-    match self.lookahead() {
+    match self.peek() {
       Some(ch) if condition(ch) => true,
       _ => false,
     }

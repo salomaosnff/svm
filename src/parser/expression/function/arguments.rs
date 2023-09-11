@@ -1,16 +1,16 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{operators::assignment, AstNode},
+  parser::{expression::assignment, AstNode},
 };
 
 pub fn parse(lexer: &mut Lexer) -> Vec<AstNode> {
   let mut arguments: Vec<AstNode> = Vec::new();
 
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p.to_string() == "(" => loop {
       lexer.consume();
 
-      match lexer.lookahead() {
+      match lexer.peek() {
         Some(Token::Punctuator(p, _)) if p.to_string() == ")" => {
           lexer.consume();
           break;

@@ -2,7 +2,7 @@ use crate::lexer::{Lexer, Token};
 
 use super::AstNode;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IdentifierName {
   pub name: String,
 }
@@ -14,7 +14,7 @@ impl IdentifierName {
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::IdentifierName(lexeme, _)) => {
       let name = lexeme.clone();
       lexer.consume();

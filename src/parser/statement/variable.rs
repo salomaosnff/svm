@@ -1,14 +1,13 @@
 use crate::{
+  get_operator,
   lexer::{Lexer, Token},
-  parser::{
-    identifier::{self, name::IdentifierName},
-    operators::assignment,
-  },
+  parser::{expression::assignment, identifier},
+  runner::run::Run,
 };
 
-use super::AstNode;
+use super::{expression_statement::end, AstNode};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VariableDeclaration {
   pub name: String,
   pub constant: bool,
@@ -25,9 +24,23 @@ impl VariableDeclaration {
   }
 }
 
+impl Run for VariableDeclaration {
+  fn run(&self, scope: &mut crate::runner::scope::Scope) -> crate::runner::value::Value {
+    let value = match &self.initializer {
+      Some(initializer) => initializer.run(scope),
+      None => crate::runner::value::Value::Undefined,
+    };
+
+    scope.declare(&self.name, value);
+
+    return crate::runner::value::Value::Undefined;
+  }
+}
+
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Keyword(l, _)) if l == "let" || l == "const" => {
+      println!("Parsing variable declaration");
       let kw: String = l.clone();
 
       lexer.consume();
@@ -37,14 +50,12 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
         _ => panic!("Expected identifier after let/const"),
       };
 
-      let initializer = match lexer.lookahead() {
-        Some(Token::Punctuator(p, _)) if p == "=" => {
-          lexer.consume();
-
-          Some(assignment::parse(lexer).expect("Expected expression after '='"))
-        }
+      let initializer = match get_operator!(lexer, "=") {
+        Some(_) => Some(assignment::parse(lexer).expect("Expected expression after '='")),
         _ => None,
       };
+
+      end(lexer).expect("Expected ';' after variable declaration");
 
       return Some(VariableDeclaration::new(
         identifier.name,

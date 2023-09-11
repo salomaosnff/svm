@@ -1,7 +1,4 @@
-use crate::{
-  lexer::Lexer,
-  parser::expression::{self, function},
-};
+use crate::{lexer::Lexer, parser::expression::function};
 
 use super::AstNode;
 

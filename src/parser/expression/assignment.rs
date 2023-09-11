@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return conditional::parse(lexer).or_else(|| -> Option<AstNode> {
+  return conditional::parse(lexer).or_else(|| {
     expression::binary::parse(
       lexer,
       operator!(

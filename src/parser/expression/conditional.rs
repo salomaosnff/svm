@@ -1,9 +1,11 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{operators, AstNode},
+  parser::AstNode,
 };
 
-#[derive(Debug)]
+use super::assignment;
+
+#[derive(Debug, Clone)]
 pub struct ConditionalExpression {
   pub condition: Box<AstNode>,
   pub consequent: Box<AstNode>,
@@ -23,17 +25,17 @@ impl ConditionalExpression {
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let condition = super::short_circuit::parse(lexer)?;
 
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p == "?" => {
       lexer.consume();
 
-      let consequent = operators::assignment::parse(lexer)?;
+      let consequent = assignment::parse(lexer)?;
 
-      match lexer.lookahead() {
+      match lexer.peek() {
         Some(Token::Punctuator(p, _)) if p == ":" => {
           lexer.consume();
 
-          let alternate = operators::assignment::parse(lexer)?;
+          let alternate = assignment::parse(lexer)?;
 
           return Some(ConditionalExpression::new(condition, consequent, alternate));
         }

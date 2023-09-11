@@ -1,8 +1,8 @@
 use crate::lexer::{Lexer, Token};
 
-use super::AstNode;
+use super::{expression_statement::end, AstNode};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockStatement {
   pub statements: Vec<AstNode>,
 }
@@ -14,7 +14,9 @@ impl BlockStatement {
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  match lexer.lookahead() {
+  end(lexer);
+
+  match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p == "{" => {
       lexer.consume();
 

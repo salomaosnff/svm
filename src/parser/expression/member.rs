@@ -5,7 +5,7 @@ use crate::{
 
 use super::AstNode;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemberExpression {
   pub property: Box<AstNode>,
   pub object: Box<AstNode>,
@@ -24,7 +24,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let mut object = super::primary::parse(lexer)?;
 
   loop {
-    match lexer.lookahead() {
+    match lexer.peek() {
       Some(Token::Punctuator(lexeme, _)) if lexeme == "." => {
         lexer.consume();
 

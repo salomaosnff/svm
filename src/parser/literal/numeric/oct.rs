@@ -1,7 +1,9 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{literal::Literal, AstNode},
+  parser::AstNode,
 };
+
+use super::NumberLiteral;
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let token = lexer.consume_if(|c| match c {
@@ -11,7 +13,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
 
   match token {
     Token::NumericLiteral(digits, _) => {
-      return Some(Literal::new(digits.to_string()));
+      return Some(NumberLiteral::new(digits.to_string()));
     }
     _ => unreachable!(),
   }

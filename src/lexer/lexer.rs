@@ -15,21 +15,30 @@ impl Tokenizer {
     }
   }
 
-  fn read_next_token(&mut self) -> Option<Token> {
-    let c = self.code.consume()?;
+  fn next_char(&mut self) -> Option<char> {
+    return match self.code.consume() {
+      Some('\n') => {
+        self.location.column = 0;
+        self.location.row += 1;
 
-    return match c {
-      // White spaces
-      c if c.is_whitespace() => {
-        if c == '\n' {
-          self.location.column = 0;
-          self.location.row += 1;
-        }
-
+        Some('\n')
+      }
+      Some(c) => {
         self.location.column += 1;
 
-        return Some(Token::WhiteSpace(c.to_string(), self.location));
+        Some(c)
       }
+      None => None,
+    };
+  }
+
+  fn read_next_token(&mut self) -> Option<Token> {
+    let c = self.next_char()?;
+
+    return match c {
+      '\n' => Some(Token::End(self.location)),
+      // White spaces
+      c if c.is_whitespace() => Some(Token::WhiteSpace(c.to_string(), self.location)),
 
       // Identifiers
       c if c.is_alphabetic() || c == '$' || c == '_' => {
@@ -89,7 +98,7 @@ impl Tokenizer {
       }
 
       // Puntuactors
-      '{' | '}' | '(' | ')' | '[' | ']' | ':' | '~' | ',' => {
+      '{' | '}' | '(' | ')' | '[' | ']' | ':' | '~' | ',' | ';' => {
         Some(Token::Punctuator(c.to_string(), self.location))
       }
 

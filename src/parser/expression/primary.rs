@@ -15,6 +15,5 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
     .or(array::parse(lexer))
     .or(object::parse(lexer))
     .or(function::parse(lexer))
-    // .or(parenthesis::parse(lexer))
-    ;
+    .or(parenthesis::parse(lexer));
 }

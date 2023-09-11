@@ -4,14 +4,14 @@ use crate::{
 };
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return match lexer.lookahead() {
+  return match lexer.peek() {
     Some(Token::Punctuator(lexeme, _)) if lexeme == "{" => {
       lexer.consume();
 
       let entries = Vec::new();
 
       loop {
-        match lexer.lookahead() {
+        match lexer.peek() {
           Some(Token::Punctuator(lexeme, _)) if lexeme == "}" => {
             lexer.consume();
             return Some(AstNode::ObjectLiteral(entries));

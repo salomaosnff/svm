@@ -18,6 +18,7 @@ pub enum Token {
   WhiteSpace(String, Location),
   Reserved(String, Location),
   Invalid(char, Location),
+  End(Location),
 }
 
 impl Display for Location {

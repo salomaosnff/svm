@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return match lexer.lookahead() {
+  return match lexer.peek() {
     Some(Token::Keyword(lexeme, _)) if lexeme == "null" => {
       lexer.consume();
       return Some(AstNode::NullLiteral);

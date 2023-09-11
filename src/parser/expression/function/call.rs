@@ -1,11 +1,11 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{expression::member, operators::assignment, AstNode},
+  parser::{expression::member, AstNode},
 };
 
 use super::arguments;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallExpression {
   pub callee: Box<AstNode>,
   pub arguments: Vec<AstNode>,
@@ -24,7 +24,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let mut exp = member::parse(lexer)?;
 
   loop {
-    match lexer.lookahead() {
+    match lexer.peek() {
       Some(Token::Punctuator(p, _)) if p.to_string() == "(" => {
         exp = CallExpression::new(exp, arguments::parse(lexer));
       }

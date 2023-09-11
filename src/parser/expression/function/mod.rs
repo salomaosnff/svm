@@ -6,7 +6,7 @@ use crate::{
 pub mod arguments;
 pub mod call;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionExpression {
   pub name: String,
   pub arguments: Vec<AstNode>,
@@ -24,7 +24,7 @@ impl FunctionExpression {
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Keyword(kw, _)) if kw == "function" => {
       lexer.consume();
 
@@ -40,7 +40,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
       let mut arguments = Vec::new();
 
       loop {
-        match lexer.lookahead() {
+        match lexer.peek() {
           Some(Token::Punctuator(p, _)) if p == ")" => {
             lexer.consume();
             break;

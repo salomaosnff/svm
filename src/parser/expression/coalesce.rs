@@ -1,5 +1,12 @@
-use crate::{lexer::Lexer, parser::AstNode};
+use crate::{lexer::Lexer, operator, parser::AstNode};
+
+use super::{binary, bitwise};
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return None;
+  return binary::parse(
+    lexer,
+    operator!("??"),
+    bitwise::or::parse,
+    bitwise::or::parse,
+  );
 }

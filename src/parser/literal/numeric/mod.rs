@@ -1,7 +1,10 @@
 pub mod bin;
 pub mod decimal;
 pub mod hex;
+mod number_literal;
 pub mod oct;
+
+pub use number_literal::NumberLiteral;
 
 use crate::{lexer::Lexer, parser::AstNode};
 

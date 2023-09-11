@@ -1,9 +1,10 @@
 use crate::{
   lexer::{Lexer, Token},
   parser::AstNode,
+  runner::{run::Run, value::Value},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BinaryExpression {
   pub operator: String,
   pub left: Box<AstNode>,
@@ -20,6 +21,24 @@ impl BinaryExpression {
   }
 }
 
+impl Run for BinaryExpression {
+  fn run(&self, scope: &mut crate::runner::scope::Scope) -> crate::runner::value::Value {
+    let left = self.left.run(scope);
+    let right = self.right.run(scope);
+
+    match self.operator.as_str() {
+      "+" => match (left, right) {
+        (Value::Number(a), Value::Number(b)) => Value::Number(a + b),
+        (Value::String(a), Value::String(b)) => Value::String(format!("{}{}", a, b)),
+        (Value::String(a), Value::Number(b)) => Value::String(format!("{}{}", a, b.to_string())),
+        (Value::Number(a), Value::String(b)) => Value::String(format!("{}{}", a.to_string(), b)),
+        _ => panic!("Invalid operands for '+'"),
+      },
+      _ => panic!("Invalid operator: {}", self.operator),
+    }
+  }
+}
+
 pub fn parse<
   O: Fn(&str) -> bool,
   L: Fn(&mut Lexer) -> Option<AstNode>,
@@ -27,17 +46,18 @@ pub fn parse<
 >(
   lexer: &mut Lexer,
   operator: O,
-  left: L,
-  right: R,
+  left_node: L,
+  right_node: R,
 ) -> Option<AstNode> {
-  let mut exp = left(lexer)?;
+  let mut exp = left_node(lexer)?;
 
   loop {
-    match lexer.lookahead() {
-      Some(Token::Punctuator(p, _)) if operator(p) => {
+    match lexer.peek() {
+      Some(Token::Punctuator(p, _)) if operator(p.as_str()) => {
         let op = p.clone();
         lexer.consume();
-        exp = BinaryExpression::new(op, exp, right(lexer)?);
+        let right = right_node(lexer).expect("Expected right side of binary expression");
+        exp = BinaryExpression::new(op, exp, right);
       }
       _ => break,
     }

@@ -1,6 +1,6 @@
 use crate::parser::AstNode;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Literal {
   pub value: String,
 }

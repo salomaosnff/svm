@@ -3,7 +3,7 @@ use crate::{
   parser::AstNode,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnaryExpression {
   pub operator: String,
   pub operand: Box<AstNode>,
@@ -23,7 +23,7 @@ use super::update;
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   let mut exp = update::parse(lexer)?;
 
-  match lexer.lookahead() {
+  match lexer.peek() {
     Some(Token::Keyword(lexeme, _)) if matches!(lexeme.as_str(), "+" | "-" | "~" | "!") => {
       let operator = lexeme.clone();
 
