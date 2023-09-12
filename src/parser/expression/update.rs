@@ -57,5 +57,5 @@ fn pre_increment(lexer: &mut Lexer) -> Option<AstNode> {
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return pre_increment(lexer).or(post_increment(lexer));
+  return pre_increment(lexer).or_else(|| post_increment(lexer));
 }

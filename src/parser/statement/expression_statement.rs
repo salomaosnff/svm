@@ -1,5 +1,3 @@
-use std::process::exit;
-
 use crate::{
   lexer::{Lexer, Token},
   parser::expression,
@@ -15,7 +13,8 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
       end(lexer);
     }
     _ => {
-      end(lexer).expect("Expected \";\" after end of statement");
+      end(lexer)
+        .expect("Expected \";\" after end of statement");
     }
   }
 

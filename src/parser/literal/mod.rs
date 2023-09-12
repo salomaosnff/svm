@@ -13,7 +13,7 @@ pub use literal::Literal;
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   return null::parse(lexer)
-    .or(boolean::parse(lexer))
-    .or(numeric::parse(lexer))
-    .or(string::parse(lexer));
+    .or_else(|| boolean::parse(lexer))
+    .or_else(|| numeric::parse(lexer))
+    .or_else(|| string::parse(lexer));
 }

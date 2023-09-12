@@ -1,1 +1,7 @@
-let x = 1;
+function maior(a, b) {
+    if a > b {
+        return a;
+    }
+}
+
+maior(2, 1);

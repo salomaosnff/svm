@@ -10,7 +10,7 @@ use crate::{lexer::Lexer, parser::AstNode};
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   return decimal::parse(lexer)
-    .or(bin::parse(lexer))
-    .or(oct::parse(lexer))
-    .or(hex::parse(lexer));
+    .or_else(|| bin::parse(lexer))
+    .or_else(|| oct::parse(lexer))
+    .or_else(|| hex::parse(lexer));
 }

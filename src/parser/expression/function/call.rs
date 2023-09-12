@@ -1,6 +1,6 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{expression::member, AstNode},
+  parser::{expression::member, AstNode, statement::{self, list}}, runner::{run::Run, scope::{Scope, ScopeType}, value::Value},
 };
 
 use super::arguments;
@@ -17,6 +17,29 @@ impl CallExpression {
       callee: Box::new(callee),
       arguments,
     });
+  }
+}
+
+impl Run for CallExpression {
+  fn run<'a>(&self, scope: &mut Scope) -> crate::runner::value::Value {
+    let mut fn_scope = scope.fork(ScopeType::Function);
+
+    if let Value::Function(function) = self.callee.run(&mut fn_scope) {
+      let args: Vec<Value> = self.arguments.iter().map(|arg| arg.run(&mut fn_scope)).collect();
+      let result;
+      
+      fn_scope.set_args(args, function.params.clone());
+
+      list::run(&function.body, &mut fn_scope);
+
+      println!("Result: {:#?}", fn_scope);
+      result = fn_scope.return_value;
+
+      return result;
+    }
+
+    print!("Expected function, got {:?}", self.callee);
+    std::process::exit(1);
   }
 }
 

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::parser::{expression::function::FunctionExpression, literal::Literal};
 
 #[derive(Debug, Clone)]
@@ -30,6 +32,19 @@ impl Value {
 
         return Self::String(value);
       }
+    }
+  }
+}
+
+impl Display for Value {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::String(value) => write!(f, "{}", value),
+      Self::Number(value) => write!(f, "{}", value),
+      Self::Boolean(value) => write!(f, "{}", value),
+      Self::Null => write!(f, "null"),
+      Self::Undefined => write!(f, "undefined"),
+      Self::Function(_) => write!(f, "[Function]"),
     }
   }
 }

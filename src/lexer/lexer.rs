@@ -57,12 +57,12 @@ impl Tokenizer {
         }
 
         return match id.as_str() {
-          "let" | "this" | "null" | "true" | "false" | "function" | "const" => {
+          "let" | "this" | "null" | "true" | "false" | "function" | "const" | "return" | "if" => {
             Some(Token::Keyword(id, self.location))
           }
           "await" | "break" | "case" | "catch" | "class" | "continue" | "debugger" | "default"
-          | "delete" | "do" | "else" | "enum" | "export" | "extends" | "finally" | "for" | "if"
-          | "import" | "in" | "instanceof" | "new" | "return" | "super" | "switch" | "throw"
+          | "delete" | "do" | "else" | "enum" | "export" | "extends" | "finally" | "for"
+          | "import" | "in" | "instanceof" | "new" | "super" | "switch" | "throw"
           | "try" | "typeof" | "var" | "void" | "while" | "with" | "yield  | " => {
             Some(Token::Reserved(id, self.location))
           }

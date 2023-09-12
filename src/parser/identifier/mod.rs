@@ -6,5 +6,5 @@ pub mod name;
 pub mod this;
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return this::parse(lexer).or(name::parse(lexer));
+  return this::parse(lexer).or_else(|| name::parse(lexer));
 }

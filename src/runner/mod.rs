@@ -6,6 +6,6 @@ pub mod run;
 pub mod scope;
 pub mod value;
 
-pub fn execute(program: AstNode) -> value::Value {
-  return run::Run::run(&program, &mut Scope::new());
+pub fn execute(program: &AstNode) -> value::Value {
+  return run::Run::run(program, &mut Scope::new());
 }

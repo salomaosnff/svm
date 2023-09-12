@@ -1,7 +1,4 @@
-use crate::lexer::{Lexer, Token};
-
-use self::expression_statement::end;
-
+use crate::lexer::Lexer;
 use super::AstNode;
 
 pub mod block;
@@ -19,15 +16,15 @@ pub mod try_;
 pub mod variable;
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
-  return block::parse(lexer)
-    .or(variable::parse(lexer))
-    .or(expression_statement::parse(lexer))
-    .or(if_::parse(lexer))
-    .or(breakable::parse(lexer))
-    .or(continue_::parse(lexer))
-    .or(break_::parse(lexer))
-    .or(return_::parse(lexer))
-    .or(labelled::parse(lexer))
-    .or(throw::parse(lexer))
-    .or(try_::parse(lexer));
+  return block::parse(lexer).map(|node| AstNode::BlockStatement(node))
+    .or_else(|| variable::parse(lexer))
+    .or_else(|| expression_statement::parse(lexer))
+    .or_else(|| if_::parse(lexer))
+    .or_else(|| breakable::parse(lexer))
+    .or_else(|| continue_::parse(lexer))
+    .or_else(|| break_::parse(lexer))
+    .or_else(|| return_::parse(lexer))
+    .or_else(|| labelled::parse(lexer))
+    .or_else(|| throw::parse(lexer))
+    .or_else(|| try_::parse(lexer));
 }

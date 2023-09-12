@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::{lexer::Lexer, runner::run::Run};
+use crate::{lexer::Lexer, runner::{run::Run, scope::Scope}};
 
 use super::AstNode;
 
@@ -16,7 +16,7 @@ impl Program {
 }
 
 impl Run for Program {
-  fn run(&self, scope: &mut crate::runner::scope::Scope) -> crate::runner::value::Value {
+  fn run(&self, scope: &mut Scope) -> crate::runner::value::Value {
     let mut result = crate::runner::value::Value::Undefined;
 
     for statement in &self.statements {

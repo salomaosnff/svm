@@ -1,6 +1,7 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{identifier, statement::block, AstNode},
+  parser::{identifier, statement::{block, variable::VariableDeclaration}, AstNode},
+  runner::{run::Run, scope::Scope, value::Value},
 };
 
 pub mod arguments;
@@ -9,17 +10,27 @@ pub mod call;
 #[derive(Debug, Clone)]
 pub struct FunctionExpression {
   pub name: String,
-  pub arguments: Vec<AstNode>,
+  pub params: Vec<VariableDeclaration>,
   pub body: Vec<AstNode>,
 }
 
 impl FunctionExpression {
-  pub fn new(name: String, arguments: Vec<AstNode>, body: Vec<AstNode>) -> AstNode {
+  pub fn new(name: String, params: Vec<VariableDeclaration>, body: Vec<AstNode>) -> AstNode {
     return AstNode::FunctionExpression(Self {
       name,
-      arguments,
+      params,
       body,
     });
+  }
+}
+
+impl Run for FunctionExpression {
+  fn run(&self, mut scope: &mut Scope) -> Value {
+    let value = Value::Function(self.clone());
+
+    scope.declare(self.name.as_str(), value.clone());
+
+    return value;
   }
 }
 
@@ -37,7 +48,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
         .consume_if(|t| matches!(t, Token::Punctuator(p, _) if p == "("))
         .expect("Expected '(' after function name");
 
-      let mut arguments = Vec::new();
+      let mut parameters:Vec<VariableDeclaration> = Vec::new();
 
       loop {
         match lexer.peek() {
@@ -51,19 +62,29 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
           }
 
           _ => {
-            arguments.push(identifier::name::parse(lexer).expect("Expected identifier"));
+            if let AstNode::IdentifierName(param) = identifier::name::parse(lexer).expect("Expected identifier") {
+              parameters.push(
+                VariableDeclaration {
+                  name: param.name,
+                  initializer: None,
+                  constant: false,
+                }
+              );
+            } else {
+              panic!("Expected identifier");
+            }
           }
         }
       }
 
       let body = match block::parse(lexer) {
-        Some(AstNode::BlockStatement(block)) => block,
+        Some(block) => block,
         _ => panic!("Expected function body"),
       };
 
       return Some(FunctionExpression::new(
         identifier.name,
-        arguments,
+        parameters,
         body.statements,
       ));
     }

@@ -1,6 +1,6 @@
-use crate::lexer::{Lexer, Token};
+use crate::{lexer::{Lexer, Token}, runner::{run::Run, scope::Scope, value::Value}};
 
-use super::{expression_statement::end, AstNode};
+use super::{expression_statement::end, AstNode, list};
 
 #[derive(Debug, Clone)]
 pub struct BlockStatement {
@@ -8,36 +8,45 @@ pub struct BlockStatement {
 }
 
 impl BlockStatement {
-  pub fn new(statements: Vec<AstNode>) -> AstNode {
-    return AstNode::BlockStatement(BlockStatement { statements });
+  pub fn new(statements: Vec<AstNode>) -> BlockStatement {
+    return BlockStatement { statements };
+  }
+
+  pub fn node(statements: Vec<AstNode>) -> AstNode {
+    return AstNode::BlockStatement(Self::new(statements));
   }
 }
 
-pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
+impl Run for BlockStatement {
+  fn run(&self, scope: &mut Scope) -> Value {
+    let mut result = Value::Undefined;
+
+    scope.block(|scope| {
+      result = list::run(&self.statements, scope);
+    });
+
+    return result;
+  }
+}
+
+pub fn parse(lexer: &mut Lexer) -> Option<BlockStatement> {
   end(lexer);
 
   match lexer.peek() {
     Some(Token::Punctuator(p, _)) if p == "{" => {
       lexer.consume();
 
-      let mut statements = Vec::new();
-
-      loop {
-        let statement = super::parse(lexer);
-
-        if statement.is_some() {
-          statements.push(statement.unwrap());
-        } else {
-          break;
-        }
-      }
+      let statements = super::list::parse(lexer);
 
       lexer
         .consume_if(|t| matches!(t, Token::Punctuator(p, _) if p == "}"))
-        .expect("Expected '}'");
+        .expect("Expected '}' after block");
+
+      end(lexer);
 
       return Some(BlockStatement::new(statements));
     }
     _ => None,
   }
+
 }

@@ -1,6 +1,6 @@
 use crate::{
   parser::AstNode,
-  runner::{self, run::Run, value::Value},
+  runner::{run::Run, value::Value, scope::Scope},
 };
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,7 @@ impl NumberLiteral {
 }
 
 impl Run for NumberLiteral {
-  fn run(&self, _: &mut runner::scope::Scope) -> Value {
+  fn run(&self, _: &mut Scope) -> Value {
     return Value::Number(self.literal.clone().parse::<f64>().unwrap());
   }
 }

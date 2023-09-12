@@ -2,7 +2,7 @@ use crate::{
   get_operator,
   lexer::{Lexer, Token},
   parser::{expression::assignment, identifier},
-  runner::run::Run,
+  runner::{run::Run, scope::Scope, value::Value},
 };
 
 use super::{expression_statement::end, AstNode};
@@ -25,22 +25,21 @@ impl VariableDeclaration {
 }
 
 impl Run for VariableDeclaration {
-  fn run(&self, scope: &mut crate::runner::scope::Scope) -> crate::runner::value::Value {
+  fn run(&self, scope: &mut Scope) -> Value {
     let value = match &self.initializer {
       Some(initializer) => initializer.run(scope),
-      None => crate::runner::value::Value::Undefined,
+      None => Value::Undefined,
     };
 
     scope.declare(&self.name, value);
 
-    return crate::runner::value::Value::Undefined;
+    return Value::Undefined;
   }
 }
 
 pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
   match lexer.peek() {
     Some(Token::Keyword(l, _)) if l == "let" || l == "const" => {
-      println!("Parsing variable declaration");
       let kw: String = l.clone();
 
       lexer.consume();
