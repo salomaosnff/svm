@@ -1,6 +1,9 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
   lexer::Lexer,
-  parser::AstNode, runner::{scope::Scope, run::Run, value::Value},
+  parser::AstNode,
+  runner::{scope::Scope, value::Value, Eval},
 };
 
 pub fn parse(lexer: &mut Lexer) -> Vec<AstNode> {
@@ -9,7 +12,6 @@ pub fn parse(lexer: &mut Lexer) -> Vec<AstNode> {
   while lexer.peek().is_some() {
     let statement = super::parse(lexer);
 
-    
     if statement.is_some() {
       statements.push(statement.unwrap());
     } else {
@@ -20,15 +22,16 @@ pub fn parse(lexer: &mut Lexer) -> Vec<AstNode> {
   return statements;
 }
 
-pub fn run(statements: &Vec<AstNode>, scope: &mut Scope) -> Value {
-  for statement in statements {
-    statement.run(scope);
+pub fn run(statements: &Vec<AstNode>, scope: &Rc<RefCell<Scope>>) -> Value {
+  let mut return_value = Value::Undefined;
 
-    match statement {
-      AstNode::ReturnStatement(_) => break,
-      _ => (),
+  for statement in statements {
+    return_value = statement.eval(scope);
+
+    if scope.as_ref().borrow().return_value_exists() {
+      break;
     }
   }
 
-  return scope.return_value.clone()
+  return return_value;
 }

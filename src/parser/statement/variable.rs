@@ -2,7 +2,6 @@ use crate::{
   get_operator,
   lexer::{Lexer, Token},
   parser::{expression::assignment, identifier},
-  runner::{run::Run, scope::Scope, value::Value},
 };
 
 use super::{expression_statement::end, AstNode};
@@ -21,19 +20,6 @@ impl VariableDeclaration {
       constant,
       initializer: initializer.map(Box::new),
     });
-  }
-}
-
-impl Run for VariableDeclaration {
-  fn run(&self, scope: &mut Scope) -> Value {
-    let value = match &self.initializer {
-      Some(initializer) => initializer.run(scope),
-      None => Value::Undefined,
-    };
-
-    scope.declare(&self.name, value);
-
-    return Value::Undefined;
   }
 }
 

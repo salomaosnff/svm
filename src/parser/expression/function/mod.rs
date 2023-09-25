@@ -1,7 +1,10 @@
 use crate::{
   lexer::{Lexer, Token},
-  parser::{identifier, statement::{block, variable::VariableDeclaration}, AstNode},
-  runner::{run::Run, scope::Scope, value::Value},
+  parser::{
+    identifier,
+    statement::{block, variable::VariableDeclaration},
+    AstNode,
+  },
 };
 
 pub mod arguments;
@@ -16,21 +19,7 @@ pub struct FunctionExpression {
 
 impl FunctionExpression {
   pub fn new(name: String, params: Vec<VariableDeclaration>, body: Vec<AstNode>) -> AstNode {
-    return AstNode::FunctionExpression(Self {
-      name,
-      params,
-      body,
-    });
-  }
-}
-
-impl Run for FunctionExpression {
-  fn run(&self, mut scope: &mut Scope) -> Value {
-    let value = Value::Function(self.clone());
-
-    scope.declare(self.name.as_str(), value.clone());
-
-    return value;
+    return AstNode::FunctionExpression(Self { name, params, body });
   }
 }
 
@@ -48,7 +37,7 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
         .consume_if(|t| matches!(t, Token::Punctuator(p, _) if p == "("))
         .expect("Expected '(' after function name");
 
-      let mut parameters:Vec<VariableDeclaration> = Vec::new();
+      let mut parameters: Vec<VariableDeclaration> = Vec::new();
 
       loop {
         match lexer.peek() {
@@ -62,14 +51,14 @@ pub fn parse(lexer: &mut Lexer) -> Option<AstNode> {
           }
 
           _ => {
-            if let AstNode::IdentifierName(param) = identifier::name::parse(lexer).expect("Expected identifier") {
-              parameters.push(
-                VariableDeclaration {
-                  name: param.name,
-                  initializer: None,
-                  constant: false,
-                }
-              );
+            if let AstNode::IdentifierName(param) =
+              identifier::name::parse(lexer).expect("Expected identifier")
+            {
+              parameters.push(VariableDeclaration {
+                name: param.name,
+                initializer: None,
+                constant: false,
+              });
             } else {
               panic!("Expected identifier");
             }

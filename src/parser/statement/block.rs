@@ -1,6 +1,6 @@
-use crate::{lexer::{Lexer, Token}, runner::{run::Run, scope::Scope, value::Value}};
+use crate::lexer::{Lexer, Token};
 
-use super::{expression_statement::end, AstNode, list};
+use super::{expression_statement::end, AstNode};
 
 #[derive(Debug, Clone)]
 pub struct BlockStatement {
@@ -14,18 +14,6 @@ impl BlockStatement {
 
   pub fn node(statements: Vec<AstNode>) -> AstNode {
     return AstNode::BlockStatement(Self::new(statements));
-  }
-}
-
-impl Run for BlockStatement {
-  fn run(&self, scope: &mut Scope) -> Value {
-    let mut result = Value::Undefined;
-
-    scope.block(|scope| {
-      result = list::run(&self.statements, scope);
-    });
-
-    return result;
   }
 }
 
@@ -48,5 +36,4 @@ pub fn parse(lexer: &mut Lexer) -> Option<BlockStatement> {
     }
     _ => None,
   }
-
 }

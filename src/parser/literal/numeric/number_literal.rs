@@ -1,7 +1,4 @@
-use crate::{
-  parser::AstNode,
-  runner::{run::Run, value::Value, scope::Scope},
-};
+use crate::parser::AstNode;
 
 #[derive(Debug, Clone)]
 pub struct NumberLiteral {
@@ -11,11 +8,5 @@ pub struct NumberLiteral {
 impl NumberLiteral {
   pub fn new(literal: String) -> AstNode {
     return AstNode::NumberLiteral(Self { literal });
-  }
-}
-
-impl Run for NumberLiteral {
-  fn run(&self, _: &mut Scope) -> Value {
-    return Value::Number(self.literal.clone().parse::<f64>().unwrap());
   }
 }

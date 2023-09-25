@@ -1,7 +1,6 @@
 use crate::{
   lexer::{Lexer, Token},
   parser::AstNode,
-  runner::{run::Run, value::Value, scope::Scope},
 };
 
 #[derive(Debug, Clone)]
@@ -12,13 +11,6 @@ pub struct StringLiteral {
 impl StringLiteral {
   pub fn new(literal: String) -> AstNode {
     return AstNode::StringLiteral(Self { literal });
-  }
-}
-
-impl Run for StringLiteral {
-  fn run(&self, _: &mut Scope) -> Value {
-    let value = self.literal.clone()[1..self.literal.len() - 1].to_string();
-    return Value::String(value);
   }
 }
 

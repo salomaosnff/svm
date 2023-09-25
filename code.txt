@@ -1,7 +1,9 @@
-function maior(a, b) {
-    if a > b {
-        return a;
-    }
+function fatorial(n) {
+  if (n <= 1) {
+    return 1;
+  }
+
+  return n * fatorial(n - 1)
 }
 
-maior(2, 1);
+fatorial(100);

@@ -1,7 +1,4 @@
-use crate::{
-  lexer::{Lexer, Token},
-  runner::{run::Run, scope::Scope},
-};
+use crate::lexer::{Lexer, Token};
 
 use super::AstNode;
 
@@ -13,12 +10,6 @@ pub struct IdentifierName {
 impl IdentifierName {
   pub fn new(name: String) -> AstNode {
     AstNode::IdentifierName(Self { name })
-  }
-}
-
-impl Run for IdentifierName {
-  fn run(&self, scope: &mut Scope) -> crate::runner::value::Value {
-    return scope.get(&self.name).clone();
   }
 }
 

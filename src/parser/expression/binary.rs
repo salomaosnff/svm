@@ -1,7 +1,6 @@
 use crate::{
   lexer::{Lexer, Token},
   parser::AstNode,
-  runner::{run::Run, value::Value, scope::Scope},
 };
 
 #[derive(Debug, Clone)]
@@ -18,28 +17,6 @@ impl BinaryExpression {
       left: Box::new(left),
       right: Box::new(right),
     });
-  }
-}
-
-impl Run for BinaryExpression {
-  fn run(&self, scope: &mut Scope) -> Value {
-    let left = self.left.run(scope);
-    let right = self.right.run(scope);
-
-    match self.operator.as_str() {
-      "+" => match (left, right) {
-        (Value::Number(a), Value::Number(b)) => Value::Number(a + b),
-        (Value::String(a), Value::String(b)) => Value::String(format!("{}{}", a, b)),
-        (Value::String(a), Value::Number(b)) => Value::String(format!("{}{}", a, b.to_string())),
-        (Value::Number(a), Value::String(b)) => Value::String(format!("{}{}", a.to_string(), b)),
-        _ => panic!("Invalid operands for '+'"),
-      },
-      ">" => match (left, right) {
-        (Value::Number(a), Value::Number(b)) => Value::Boolean(a > b),
-        _ => panic!("Invalid operands for '>'"),
-      },
-      _ => panic!("Invalid operator: {}", self.operator),
-    }
   }
 }
 
