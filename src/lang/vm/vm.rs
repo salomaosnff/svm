@@ -126,7 +126,7 @@ impl VM {
     for _ in 0..count {
       let value = i32::from_be_bytes(self.stack.pop());
 
-      buffer.push(value as u8); 
+      buffer.push(value as u8);
     }
 
     self.io[descriptor as usize].write(&buffer);

@@ -23,9 +23,11 @@ impl IO for Stdout {
   }
 
   fn write(&mut self, buffer: &[u8]) {
-    std::io::stdout()
-      .lock()
-      .write_all(buffer)
-      .expect("Falha na escrita do terminal!");
+    // std::io::stdout()
+    //   .lock()
+    //   .write_all(buffer)
+    //   .expect("Falha na escrita do terminal!");
+
+    println!("STDOUT >> {:?}", buffer);
   }
 }
