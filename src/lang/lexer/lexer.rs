@@ -302,7 +302,7 @@ impl Tokenizer {
           number_literal.push_str(
             &self
               .code
-              .consume_while(|c| c.is_numeric())
+              .consume_while(|c| c.is_numeric() || *c == '.')
               .into_iter()
               .collect::<String>(),
           );

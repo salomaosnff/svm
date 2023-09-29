@@ -3,6 +3,21 @@ use std::fmt::Display;
 use crate::parser::{expression::function::FunctionExpression, literal::Literal};
 
 #[derive(Debug, Clone)]
+pub struct NativeFunction {
+  function: fn(Vec<Value>) -> Value,
+}
+
+impl NativeFunction {
+  pub fn new(function: fn(Vec<Value>) -> Value) -> Self {
+    return Self { function };
+  }
+
+  pub fn call(&self, args: Vec<Value>) -> Value {
+    return (self.function)(args);
+  }
+}
+
+#[derive(Debug, Clone)]
 pub enum Value {
   String(String),
   Number(f64),
@@ -10,6 +25,7 @@ pub enum Value {
   Null,
   Undefined,
   Function(FunctionExpression),
+  NativeFunction(NativeFunction),
 }
 
 impl Value {
@@ -45,6 +61,7 @@ impl Display for Value {
       Self::Null => write!(f, "null"),
       Self::Undefined => write!(f, "undefined"),
       Self::Function(_) => write!(f, "[Function]"),
+      Self::NativeFunction(_) => write!(f, "[NativeFunction]"),
     }
   }
 }

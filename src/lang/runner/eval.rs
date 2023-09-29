@@ -8,7 +8,7 @@ use crate::parser::{
   identifier::name::IdentifierName,
   literal::{numeric::NumberLiteral, string::StringLiteral},
   program::Program,
-  statement::{if_::IfStatement, list, return_::ReturnStatement},
+  statement::{if_::IfStatement, list, return_::ReturnStatement, variable::VariableDeclaration},
   AstNode,
 };
 
@@ -26,7 +26,7 @@ impl Eval for Program {
 
 impl Eval for StringLiteral {
   fn eval(&self, _: &Rc<RefCell<Scope>>) -> Value {
-    return Value::String(self.literal.clone());
+    return Value::String(self.literal[1..self.literal.len() - 1].to_string());
   }
 }
 
@@ -103,6 +103,15 @@ impl Eval for CallExpression {
 
         return fn_scope.as_ref().borrow().get_return_value();
       }
+      Value::NativeFunction(func) => {
+        let mut args = Vec::new();
+
+        for arg in &self.arguments {
+          args.push(arg.eval(scope));
+        }
+
+        return func.call(args);
+      },
       _ => {
         println!("Cannot call {:?}", callee);
         return Value::Undefined;
@@ -142,6 +151,20 @@ impl Eval for IfStatement {
   }
 }
 
+impl Eval for VariableDeclaration {
+  fn eval(&self, scope: &Rc<RefCell<Scope>>) -> Value {
+    scope
+      .as_ref()
+      .borrow_mut()
+      .set(
+        &self.name, self.initializer
+        .as_ref()
+        .map_or(Value::Undefined, |val| val.eval(scope))
+      );
+    return Value::Undefined;
+  }
+}
+
 impl Eval for AstNode {
   fn eval(&self, scope: &Rc<RefCell<Scope>>) -> Value {
     match self {
@@ -154,6 +177,7 @@ impl Eval for AstNode {
       AstNode::IdentifierName(node) => node.eval(scope),
       AstNode::ReturnStatement(node) => node.eval(scope),
       AstNode::IfStatement(node) => node.eval(scope),
+      AstNode::VariableDeclaration(node) => node.eval(scope),
       _ => {
         println!("Eval not implemented for {:?}", self);
         exit(1)

@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-
 pub struct Location {
   pub column: usize,
   pub row: usize,

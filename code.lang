@@ -1,0 +1,17 @@
+SPUSH '\n'
+SPUSH '!'
+SPUSH 'd'
+SPUSH 'l'
+SPUSH 'r'
+SPUSH 'o'
+SPUSH 'W'
+SPUSH ' '
+SPUSH 'o'
+SPUSH 'l'
+SPUSH 'l'
+SPUSH 'e'
+SPUSH 'H'
+
+SPUSH 13
+SPUSH 1
+WRITE

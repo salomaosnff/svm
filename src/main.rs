@@ -1,23 +1,26 @@
-use std::{fs::File, time::Instant};
+use std::{time::Instant, fs::File};
 
-use crate::runner::Eval;
+mod lang;
 
-mod lexer;
-mod parser;
-mod runner;
+use crate::lang::opcode::{self, disassemble, assemble, Assembler, compile_file};
+
+fn run<U, T: FnOnce() -> U>(f: T) -> U {
+  let now = Instant::now();
+  let result = f();
+  let elapsed = now.elapsed();
+
+  println!("Tempo: {:?}", elapsed);
+
+  return result;
+}
 
 fn main() {
   // Clear the terminal
   println!("\x1bc");
-  let code = lexer::code::from_file(File::open("code.txt").unwrap());
-  let mut lexer = lexer::from_code(code);
-  let program = parser::parse(&mut lexer).expect("Failed to parse program");
-  let scope = runner::scope::Scope::new();
-  let now = Instant::now();
-  let result = program.eval(&scope);
-  let elapsed = now.elapsed();
 
-  println!("{}", result);
+  let mut vm = lang::vm::VM::new();
 
-  println!("Tempo: {:?}", elapsed);
+  vm.program = compile_file(File::open("code.lang").unwrap());
+
+  run(|| vm.run());
 }
