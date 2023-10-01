@@ -4,6 +4,7 @@ use super::IO;
 
 pub struct Stdin;
 pub struct Stdout;
+pub struct Stderr;
 
 impl IO for Stdin {
   fn read(&mut self, buffer: &mut [u8]) {
@@ -23,11 +24,26 @@ impl IO for Stdout {
   }
 
   fn write(&mut self, buffer: &[u8]) {
+    std::io::stdout()
+      .lock()
+      .write_all(buffer)
+      .expect("Falha na escrita do terminal!");
+
+    // println!("STDOUT >> {:?}", buffer);
+  }
+}
+
+impl IO for Stderr {
+  fn read(&mut self, buffer: &mut [u8]) {
+    eprintln!("STDERR é somente escrita!")
+  }
+
+  fn write(&mut self, buffer: &[u8]) {
     // std::io::stdout()
     //   .lock()
     //   .write_all(buffer)
     //   .expect("Falha na escrita do terminal!");
 
-    println!("STDOUT >> {:?}", buffer);
+    println!("STDERR >> {:?}", buffer);
   }
 }

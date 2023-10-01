@@ -22,7 +22,7 @@ fn main() {
 
   vm.program = compile_file(File::open("code.lang").unwrap());
 
-  println!("{:#?}", assemble(&vm.program));
+  // println!("{:#?}", (&vm.program));
 
   run(|| vm.run());
 }

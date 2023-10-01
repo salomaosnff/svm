@@ -18,6 +18,10 @@ impl Stack {
     }
   }
 
+  pub fn peek(&self) -> [u8; STACK_ITEM_SIZE] {
+    return self.get(self.sp - 1);
+  }
+
   pub fn push(&mut self, value: [u8; STACK_ITEM_SIZE]) {
     if self.sp >= self.size {
       vm_panic("StackOverflow", "Maximum stack size exceeded!");
@@ -38,14 +42,13 @@ impl Stack {
     let mut value = [0; STACK_ITEM_SIZE];
 
     self.sp -= 1;
-        
+
     let index = self.sp * STACK_ITEM_SIZE;
 
     for i in 0..STACK_ITEM_SIZE {
       value[i] = self.data[index];
       self.data.remove(index);
     }
-    
 
     return value;
   }

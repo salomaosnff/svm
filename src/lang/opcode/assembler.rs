@@ -82,11 +82,39 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
           continue;
         }
 
-        if c == '0' {
-          let next = line.next().expect("Invalid char");
+        if c == '"' {
+          let mut char = line.next().expect("Invalid char");
+          let mut length = 0;
 
-          match next {
-            'x' => {
+          while char != '"' {
+            let arg = if char == '\\' {
+              char = line.next().expect("Invalid char");
+
+              match char {
+                'n' => '\n' as i32,
+                't' => '\t' as i32,
+                'r' => '\r' as i32,
+                _ => char as i32,
+              }
+            } else {
+              char as i32
+            };
+
+            buffer.push(OpCode::SPUSH(arg));
+            length += 1;
+            char = line.next().expect("Invalid char");
+          }
+
+          buffer.push(OpCode::SPUSH(length));
+
+          op.clear();
+
+          continue;
+        }
+
+        if c == '0' {
+          match line.next() {
+            Some('x') => {
               let mut hex = String::new();
 
               while let Some(c) = line.next() {
@@ -99,7 +127,7 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
 
               args.push(i32::from_str_radix(&hex, 16).unwrap());
             }
-            'b' => {
+            Some('b') => {
               let mut bin = String::new();
 
               while let Some(c) = line.next() {
@@ -112,7 +140,7 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
 
               args.push(i32::from_str_radix(&bin, 2).unwrap());
             }
-            'o' => {
+            Some('o') => {
               let mut oct = String::new();
 
               while let Some(c) = line.next() {
@@ -125,7 +153,7 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
 
               args.push(i32::from_str_radix(&oct, 8).unwrap());
             }
-            c if c.is_numeric() => {
+            Some(c) if c.is_numeric() => {
               let mut dec = String::new();
 
               dec.push(c);
@@ -139,6 +167,9 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
               }
 
               args.push(i32::from_str_radix(&dec, 10).unwrap());
+            }
+            None => {
+              args.push(0);
             }
             _ => panic!("Invalid char"),
           }
@@ -173,7 +204,10 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
     match op.as_str() {
       "NOOP" => buffer.push(OpCode::NOP),
       "HALT" => buffer.push(OpCode::HALT),
+      "SPEEK" => buffer.push(OpCode::SPEEK),
       "SPUSH" => buffer.push(OpCode::SPUSH(args[0])),
+      "INC" => buffer.push(OpCode::INC),
+      "DEC" => buffer.push(OpCode::DEC),
       "ADD" => buffer.push(OpCode::ADD),
       "SUB" => buffer.push(OpCode::SUB),
       "MUL" => buffer.push(OpCode::MUL),
@@ -181,6 +215,10 @@ pub fn compile_file(file: File) -> Vec<OpCode> {
       "MOD" => buffer.push(OpCode::MOD),
       "POW" => buffer.push(OpCode::POW),
       "WRITE" => buffer.push(OpCode::WRITE),
+      "LABEL" => buffer.push(OpCode::LABEL(args[0])),
+      "JUMP" => buffer.push(OpCode::JUMP),
+      "JUMPI" => buffer.push(OpCode::JUMPI),
+      "LT" => buffer.push(OpCode::LT),
       op => panic!("Invalid opcode {op}"),
     }
   }

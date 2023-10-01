@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::lang::opcode::OpCode;
 
-use super::{Stack, Stdin, Stdout};
+use super::{util::vm_panic, Stack, Stderr, Stdin, Stdout};
 
 pub trait IO {
   fn read(&mut self, buffer: &mut [u8]);
@@ -11,7 +11,7 @@ pub trait IO {
 
 impl Debug for dyn IO {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "[#IO]")
+    write!(f, "<IO>")
   }
 }
 
@@ -22,6 +22,7 @@ pub struct VM {
   pub pc: usize,
   pub running: bool,
   pub io: Vec<Box<dyn IO>>,
+  pub labels: Vec<usize>,
 }
 
 impl VM {
@@ -31,7 +32,8 @@ impl VM {
       program: Vec::new(),
       pc: 0,
       running: false,
-      io: vec![Box::new(Stdin), Box::new(Stdout), Box::new(Stdout)],
+      io: vec![Box::new(Stdin), Box::new(Stdout), Box::new(Stderr)],
+      labels: Vec::new(),
     }
   }
 
@@ -43,18 +45,25 @@ impl VM {
     self.running = true;
 
     while self.running {
-      let op = self.program[self.pc].clone();
-
-      self.pc += 1;
-
       if self.pc >= self.program.len() {
         self.running = false;
+        break;
       }
+
+      let op = self.program[self.pc].clone();
 
       match op {
         OpCode::NOP => (),
         OpCode::HALT => self.halt(),
         OpCode::SPUSH(value) => self.spush(value),
+        OpCode::INC => {
+          let value = i32::from_be_bytes(self.stack.pop());
+          self.stack.push((value + 1).to_be_bytes());
+        }
+        OpCode::DEC => {
+          let value = i32::from_be_bytes(self.stack.pop());
+          self.stack.push((value - 1).to_be_bytes());
+        }
         OpCode::ADD => self.add(),
         OpCode::SUB => self.sub(),
         OpCode::MUL => self.mul(),
@@ -62,8 +71,52 @@ impl VM {
         OpCode::MOD => self.modulo(),
         OpCode::POW => self.pow(),
         OpCode::WRITE => self.write(),
-        _ => panic!("Invalid opcode"),
+        OpCode::LABEL(value) => {
+          if value as usize >= self.labels.len() {
+            self.labels.resize(value as usize + 1, 0);
+          }
+
+          self.labels[value as usize] = self.pc;
+        }
+        OpCode::JUMP => {
+          let label = i32::from_be_bytes(self.stack.pop());
+
+          let value = self.labels.get(label as usize);
+
+          match value {
+            Some(value) => self.pc = value.clone(),
+            None => vm_panic("InvalidLabel", format!("Invalid label: {}", label).as_str()),
+          }
+        }
+        OpCode::SPEEK => {
+          let value = self.stack.peek();
+
+          self.stack.push(value);
+        }
+        OpCode::LT => {
+          let b = i32::from_be_bytes(self.stack.pop());
+          let a = i32::from_be_bytes(self.stack.pop());
+
+          self.stack.push(((a < b) as i32).to_be_bytes());
+        }
+        OpCode::JUMPI => {
+          let label = i32::from_be_bytes(self.stack.pop());
+          let value = self.labels.get(label as usize);
+
+          match value {
+            Some(value) => {
+              let condition = i32::from_be_bytes(self.stack.pop());
+
+              if condition != 0 {
+                self.pc = value.clone();
+              }
+            }
+            None => vm_panic("InvalidLabel", format!("Invalid label: {}", label).as_str()),
+          }
+        }
       }
+
+      self.pc += 1;
     }
   }
 
@@ -119,14 +172,14 @@ impl VM {
 
   fn write(&mut self) {
     let descriptor = i32::from_be_bytes(self.stack.pop());
-    let count = i32::from_be_bytes(self.stack.pop());
+    let count = i32::from_be_bytes(self.stack.pop()) as usize;
 
     let mut buffer = vec![0; count as usize];
 
-    for _ in 0..count {
+    for i in 0..count {
       let value = i32::from_be_bytes(self.stack.pop());
 
-      buffer.push(value as u8);
+      buffer[count - i - 1] = value as u8;
     }
 
     self.io[descriptor as usize].write(&buffer);
