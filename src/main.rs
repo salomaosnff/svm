@@ -1,15 +1,18 @@
-use std::{fs::File, time::Instant};
+use std::{fs::File, time::Instant, io::Write};
 
 mod lang;
 
-use crate::lang::opcode::{assemble, compile_file};
+use crate::lang::{
+  assembler,
+  vm,
+};
 
-fn run<U, T: FnOnce() -> U>(f: T) -> U {
+fn run<U, T: FnOnce() -> U>(name: &str, f: T) -> U {
   let now = Instant::now();
   let result = f();
   let elapsed = now.elapsed();
 
-  println!("Tempo: {:?}", elapsed);
+  println!("{name}: {:?}", elapsed);
 
   return result;
 }
@@ -18,11 +21,17 @@ fn main() {
   // Clear the terminal
   println!("\x1bc");
 
-  let mut vm = lang::vm::VM::new();
+  let mut vm = vm::VM::new();
+  let file = File::open("code.lang").expect("Could not open file");
+  let mut output = File::create("code.bin").expect("Could not create file");
 
-  vm.program = compile_file(File::open("code.lang").unwrap());
+  let bytecode = assembler::compile(file);
 
-  // println!("{:#?}", (&vm.program));
+  output.write_all(&bytecode.data).expect("Could not write to file");
+  
+  vm.program = assembler::parse(bytecode.data);
 
-  run(|| vm.run());
+  // println!("{:?}", vm.program);
+
+  run("Run", || vm.run());
 }

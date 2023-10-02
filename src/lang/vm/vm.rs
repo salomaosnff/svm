@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::lang::opcode::OpCode;
+use crate::lang::assembler::opcodes::OpCode;
 
 use super::{util::vm_panic, Stack, Stderr, Stdin, Stdout};
 
@@ -22,7 +22,6 @@ pub struct VM {
   pub pc: usize,
   pub running: bool,
   pub io: Vec<Box<dyn IO>>,
-  pub labels: Vec<usize>,
 }
 
 impl VM {
@@ -33,29 +32,33 @@ impl VM {
       pc: 0,
       running: false,
       io: vec![Box::new(Stdin), Box::new(Stdout), Box::new(Stderr)],
-      labels: Vec::new(),
     }
   }
 
   pub fn add_io<T: IO + 'static>(&mut self, io: T) {
     self.io.push(Box::new(io));
   }
-
+  
   pub fn run(&mut self) {
     self.running = true;
-
+    
     while self.running {
       if self.pc >= self.program.len() {
         self.running = false;
         break;
       }
-
+      
       let op = self.program[self.pc].clone();
-
-      match op {
+          
+      match op.clone() {
         OpCode::NOP => (),
         OpCode::HALT => self.halt(),
-        OpCode::SPUSH(value) => self.spush(value),
+        OpCode::PUSH(value) => self.push(value),
+        OpCode::PUSHALL(values) => {
+          for value in values {
+            self.push(value);
+          }
+        }
         OpCode::INC => {
           let value = i32::from_be_bytes(self.stack.pop());
           self.stack.push((value + 1).to_be_bytes());
@@ -71,24 +74,12 @@ impl VM {
         OpCode::MOD => self.modulo(),
         OpCode::POW => self.pow(),
         OpCode::WRITE => self.write(),
-        OpCode::LABEL(value) => {
-          if value as usize >= self.labels.len() {
-            self.labels.resize(value as usize + 1, 0);
-          }
-
-          self.labels[value as usize] = self.pc;
-        }
         OpCode::JUMP => {
           let label = i32::from_be_bytes(self.stack.pop());
 
-          let value = self.labels.get(label as usize);
-
-          match value {
-            Some(value) => self.pc = value.clone(),
-            None => vm_panic("InvalidLabel", format!("Invalid label: {}", label).as_str()),
-          }
+          self.pc = label as usize;
         }
-        OpCode::SPEEK => {
+        OpCode::COPY => {
           let value = self.stack.peek();
 
           self.stack.push(value);
@@ -99,20 +90,28 @@ impl VM {
 
           self.stack.push(((a < b) as i32).to_be_bytes());
         }
-        OpCode::JUMPI => {
+        OpCode::CMP => {
           let label = i32::from_be_bytes(self.stack.pop());
-          let value = self.labels.get(label as usize);
+          let condition = i32::from_be_bytes(self.stack.pop());
 
-          match value {
-            Some(value) => {
-              let condition = i32::from_be_bytes(self.stack.pop());
-
-              if condition != 0 {
-                self.pc = value.clone();
-              }
-            }
-            None => vm_panic("InvalidLabel", format!("Invalid label: {}", label).as_str()),
+          if condition != 0 {
+            self.pc = label as usize;
           }
+        }
+        OpCode::EQ => {
+          let b = i32::from_be_bytes(self.stack.pop());
+          let a = i32::from_be_bytes(self.stack.pop());
+
+          self.stack.push(((a == b) as i32).to_be_bytes());
+        }
+        OpCode::GT => {
+          let b = i32::from_be_bytes(self.stack.pop());
+          let a = i32::from_be_bytes(self.stack.pop());
+
+          self.stack.push(((a > b) as i32).to_be_bytes());
+        }
+        OpCode::POP => {
+          self.stack.pop();
         }
       }
 
@@ -124,7 +123,7 @@ impl VM {
     self.running = false;
   }
 
-  fn spush(&mut self, value: i32) {
+  fn push(&mut self, value: i32) {
     self.stack.push(value.to_be_bytes());
   }
 

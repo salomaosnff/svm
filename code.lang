@@ -1,16 +1,18 @@
-SPUSH 'A'
-DEC
-LABEL 0
-INC
-SPEEK
-SPUSH 1
-SPUSH 1
-WRITE
-SPEEK
-SPUSH 'Z'
-LT
-SPUSH 0
-JUMPI
-SPUSH "\n"
-SPUSH 1
+PUSH 64     ; Código do caractere @
+@loop
+INC         ; Incrementa
+COPY        ; Copia o valor para impressão
+PUSH 1      ; Imprimir 1 byte
+PUSH 1      ; Imprimir no stdout
+WRITE       ; Imprimir
+COPY        ; Copia para comparar
+PUSH 'Z'    ; Adiciona 'Z' para comparar
+LT          ; Compara se o atual é < 'Z'
+PUSH @loop  ; Se for, pula para @loop
+CMP
+PUSH "\n"
+PUSH "Fim do loop!"
+PUSH "\n"
+PUSH 14
+PUSH 1
 WRITE
