@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use super::{DataType, StackValue};
+
 pub const NOP: u8 = 0x00;
 pub const HALT: u8 = 0x01;
 pub const COPY: u8 = 0x02;
@@ -20,28 +22,33 @@ pub const CMP: u8 = 0x10;
 pub const LT: u8 = 0x11;
 pub const EQ: u8 = 0x12;
 pub const GT: u8 = 0x13;
-
+pub const MSP: u8 = 0x14;
+pub const SP: u8 = 0x15;
+pub const PC: u8 = 0x16;
 
 #[derive(Clone, Debug)]
 pub enum OpCode {
   NOP,
   HALT,
-  PUSH(i32),
-  PUSHALL(Vec<i32>),
-  POP,
-  COPY,
-  ADD,
-  SUB,
-  MUL,
-  DIV,
-  MOD,
-  POW,
+  PUSH(StackValue),
+  PUSHALL(Vec<StackValue>),
+  POP(DataType),
+  COPY(DataType),
+  ADD(DataType),
+  SUB(DataType),
+  MUL(DataType),
+  DIV(DataType),
+  MOD(DataType),
+  POW(DataType),
   WRITE,
   JUMP,
-  INC,
-  DEC,
-  LT,
+  INC(DataType),
+  DEC(DataType),
+  LT(DataType),
   CMP,
-  EQ,
-  GT,
+  EQ(DataType),
+  GT(DataType),
+  MSP,
+  SP,
+  PC,
 }

@@ -37,7 +37,10 @@ fn parse_line(line: &str) -> Option<Instruction> {
 
   line = line.trim().to_string();
 
-  
+  if opcode.is_empty() {
+    return None;
+  }
+
   while line.len() > 0 {
     let mut operand = String::new();
     
@@ -69,7 +72,7 @@ fn parse_line(line: &str) -> Option<Instruction> {
   return Some(Instruction::OpCode(InstructionOpCode { opcode, operands }));
 }
 
-pub fn compile(mut source_file: File) -> Bytecode {
+pub fn compile(source_file: File) -> Bytecode {
   let reader = std::io::BufReader::new(source_file);
   let mut file = Bytecode::new();
 
@@ -98,6 +101,9 @@ pub fn compile(mut source_file: File) -> Bytecode {
         "LT" => file.lt(),
         "EQ" => file.eq(),
         "GT" => file.gt(),
+        "MSP" => file.msp(),
+        "SP" => file.sp(),
+        "PC" => file.pc(),
         op => panic!("Opcode {op} not implemented in compiler"),
       },
       _ => continue,

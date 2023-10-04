@@ -13,13 +13,13 @@ impl IO for Stdin {
       .expect("Falha na leitura do teclado!");
   }
 
-  fn write(&mut self, buffer: &[u8]) {
+  fn write(&mut self, _: &[u8]) {
     eprintln!("STDIN é somente leitura!")
   }
 }
 
 impl IO for Stdout {
-  fn read(&mut self, buffer: &mut [u8]) {
+  fn read(&mut self, _: &mut [u8]) {
     eprintln!("STDOUT é somente escrita!")
   }
 
@@ -34,7 +34,7 @@ impl IO for Stdout {
 }
 
 impl IO for Stderr {
-  fn read(&mut self, buffer: &mut [u8]) {
+  fn read(&mut self, _: &mut [u8]) {
     eprintln!("STDERR é somente escrita!")
   }
 

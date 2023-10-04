@@ -8,7 +8,7 @@ pub struct Bytecode {
   instruction_count: usize,
 }
 
-pub fn delimited_string(delimiter: char, mut str: &str) -> String {
+pub fn delimited_string(delimiter: char, str: &str) -> String {
   let string = &mut str.to_string();
   let mut result = String::new();
 
@@ -78,7 +78,9 @@ impl Bytecode {
         }
 
         // Write as 4 bytes per char
-        self.data.extend(slice.chars().flat_map(|x| (x as i32).to_be_bytes()));
+        self
+          .data
+          .extend(slice.chars().flat_map(|x| (x as i32).to_be_bytes()));
 
         str = str[slice.len()..].to_string();
       }
@@ -93,7 +95,9 @@ impl Bytecode {
   }
 
   pub fn label(&mut self, label: &str) -> &mut Self {
-    self.labels.insert(label.to_string(), self.instruction_count as i32 - 1);
+    self
+      .labels
+      .insert(label.to_string(), self.instruction_count as i32 - 1);
     return self;
   }
 
@@ -142,29 +146,38 @@ impl Bytecode {
   }
 
   pub fn _write_number_base(&mut self, prefix: &str, base: u32, mut value: &str) -> &mut Self {
-    if value.starts_with(prefix) {
-      value = &value[prefix.len()..];
+    let mut result = String::new();
+
+    if value.starts_with("-") {
+      value = &value[1..];
+      result.push('-');
     }
 
-    let value = i32::from_str_radix(&value, base).expect("Invalid hex number");
+    if value.starts_with(prefix) {
+      value = &value[prefix.len()..];
+      result.push_str(value);
+    }
+
+    let value = i32::from_str_radix(result.as_str(), base).expect("Invalid hex number");
 
     self.data.extend(value.to_be_bytes());
+
     return self;
   }
 
   pub fn _value(&mut self, literal: &str) -> &mut Self {
     // Hex number
-    if literal.starts_with("0x") {
+    if literal.starts_with("0x") || literal.starts_with("-0x") {
       return self._write_number_base("0x", 16, literal);
     }
 
     // Binary number
-    if literal.starts_with("0b") {
+    if literal.starts_with("0b") || literal.starts_with("-0b") {
       return self._write_number_base("0b", 2, literal);
     }
 
     // Octal number
-    if literal.starts_with("0o") {
+    if literal.starts_with("0o") || literal.starts_with("-0x") {
       return self._write_number_base("0o", 8, literal);
     }
 
@@ -183,7 +196,9 @@ impl Bytecode {
     if literal.starts_with("\"") {
       let string = delimited_string('"', literal);
 
-      self.data.extend(string.chars().flat_map(|x| (x as i32).to_be_bytes()));
+      self
+        .data
+        .extend(string.chars().flat_map(|x| (x as i32).to_be_bytes()));
 
       return self;
     }
@@ -288,6 +303,21 @@ impl Bytecode {
 
   pub fn gt(&mut self) -> &mut Self {
     self._opcode(opcodes::GT);
+    return self;
+  }
+
+  pub fn msp(&mut self) -> &mut Self {
+    self._opcode(opcodes::MSP);
+    return self;
+  }
+
+  pub fn sp(&mut self) -> &mut Self {
+    self._opcode(opcodes::SP);
+    return self;
+  }
+
+  pub fn pc(&mut self) -> &mut Self {
+    self._opcode(opcodes::PC);
     return self;
   }
 }
