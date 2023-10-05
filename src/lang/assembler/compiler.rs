@@ -321,6 +321,17 @@ fn parse_line(line: &str) -> Option<Instruction> {
   return Some(Instruction::OpCode(InstructionOpCode { opcode, operands }));
 }
 
+fn get_next_type(opcode: &mut InstructionOpCode) -> DataType {
+  if opcode.operands.len() > 0 {
+    match opcode.operands.remove(0) {
+      Operand::Type(item_type) => item_type,
+      _ => DataType::I32,
+    }
+  } else {
+    DataType::I32
+  }
+}
+
 pub fn compile(source_file: File) -> Bytecode {
   let reader = std::io::BufReader::new(source_file);
   let mut file = Bytecode::new();
@@ -347,76 +358,28 @@ pub fn compile(source_file: File) -> Bytecode {
             file.push_values(values);
           }
           "ADD" => {
-            if opcode.operands.len() <= 0 {
-              panic!("ADD expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.add(item_type);
-              }
-              _ => panic!("ADD expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.add(item_type);
           }
           "SUB" => {
-            if opcode.operands.len() <= 0 {
-              panic!("SUB expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.sub(item_type);
-              }
-              _ => panic!("SUB expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.sub(item_type);
           }
           "MUL" => {
-            if opcode.operands.len() <= 0 {
-              panic!("MUL expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.mul(item_type);
-              }
-              _ => panic!("MUL expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.mul(item_type);
           }
           "DIV" => {
-            if opcode.operands.len() <= 0 {
-              panic!("DIV expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.div(item_type);
-              }
-              _ => panic!("DIV expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.div(item_type);
           }
           "MOD" => {
-            if opcode.operands.len() <= 0 {
-              panic!("MOD expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.modulo(item_type);
-              }
-              _ => panic!("MOD expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.modulo(item_type);
           }
           "POW" => {
-            if opcode.operands.len() <= 0 {
-              panic!("POW expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.pow(item_type);
-              }
-              _ => panic!("POW expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.pow(item_type);
           }
           "WRITE" => {
             file.write();
@@ -428,112 +391,52 @@ pub fn compile(source_file: File) -> Bytecode {
             file.cmp();
           }
           "COPY" => {
-            if opcode.operands.len() <= 0 {
-              panic!("COPY expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.copy(item_type);
-              }
-              _ => panic!("COPY expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.copy(item_type);
           }
           "LT" => {
-            if opcode.operands.len() <= 0 {
-              panic!("LT expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.lt(item_type);
-              }
-              _ => panic!("LT expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.lt(item_type);
           }
           "GT" => {
-            if opcode.operands.len() <= 0 {
-              panic!("GT expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.gt(item_type);
-              }
-              _ => panic!("GT expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.gt(item_type);
           }
           "GTE" => {
-            if opcode.operands.len() <= 0 {
-              panic!("GTE expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.gte(item_type);
-              }
-              _ => panic!("GTE expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.gte(item_type);
           }
           "LTE" => {
-            if opcode.operands.len() <= 0 {
-              panic!("LTE expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.lte(item_type);
-              }
-              _ => panic!("LTE expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.lte(item_type);
           }
           "EQ" => {
-            if opcode.operands.len() <= 0 {
-              panic!("EQ expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.eq(item_type);
-              }
-              _ => panic!("EQ expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.eq(item_type);
           }
           "NEQ" => {
-            if opcode.operands.len() <= 0 {
-              panic!("NEQ expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.neq(item_type);
-              }
-              _ => panic!("NEQ expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.neq(item_type);
           }
           "INC" => {
-            if opcode.operands.len() <= 0 {
-              panic!("INC expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.inc(item_type);
-              }
-              _ => panic!("INC expect a type!"),
-            }
+            let item_type = get_next_type(&mut opcode);
+            file.inc(item_type);
           }
           "DEC" => {
-            if opcode.operands.len() <= 0 {
-              panic!("DEC expect a type!")
-            }
-
-            match opcode.operands.remove(0) {
-              Operand::Type(item_type) => {
-                file.dec(item_type);
+            let item_type = get_next_type(&mut opcode);
+            file.dec(item_type);
+          }
+          "POP" => {
+            let item_type = if opcode.operands.len() > 0 {
+              match opcode.operands.remove(0) {
+                Operand::Type(item_type) => item_type,
+                _ => DataType::I32,
               }
-              _ => panic!("DEC expect a type!"),
-            }
+            } else {
+              DataType::I32
+            };
+
+            file.pop(item_type);
           }
           _ => panic!("Opcode {:#?} not implemented in compiler", opcode),
         };
