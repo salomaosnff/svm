@@ -2,6 +2,8 @@ use crate::lang::assembler::{DataType, StackValue};
 
 use super::util::vm_panic;
 
+const USIZE_LEN: usize = std::mem::size_of::<usize>();
+
 #[derive(Debug)]
 pub struct Stack {
   pub data: Vec<u8>,
@@ -100,16 +102,12 @@ impl Stack {
         return &self.data[range];
       }
       DataType::Buffer => {
-        let usize_len = std::mem::size_of::<usize>();
-        let size_buffer = self.peek(&DataType::Usize);
-        let size = usize::from_ne_bytes(size_buffer[0..usize_len].try_into().unwrap());
-        let range = self.sp - size..self.sp;
+        let buffer_size = match self.pop_value(&DataType::Usize) {
+          StackValue::Usize(value) => value,
+          _ => unreachable!(),
+        };
 
-        if range.end > self.data.len() || range.start > range.end {
-          vm_panic("StackOverflow", "Stack pointer out of bounds!");
-        }
-
-        return &self.data[range];
+        return &self.data[self.sp - buffer_size..self.sp]
       }
     }
   }
@@ -119,7 +117,7 @@ impl Stack {
   }
 
   pub fn push_value(&mut self, value: StackValue) {
-    self.push(value.to_stack_bytes());
+    self.push(value.to_bytes());
   }
 
   pub fn push(&mut self, value: Vec<u8>) {

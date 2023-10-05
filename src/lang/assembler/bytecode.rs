@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::opcodes;
+use super::{opcodes, DataType, StackValue};
 
 pub struct Bytecode {
   pub data: Vec<u8>,
@@ -52,48 +52,6 @@ impl Bytecode {
     return self;
   }
 
-  pub fn push_one(&mut self, item: &str) -> &mut Self {
-    if item.starts_with("\"") {
-      let mut str = delimited_string('"', item.clone());
-      let len = str.chars().count();
-
-      if len <= 2 {
-        for i in 0..len {
-          self._opcode(opcodes::PUSH);
-          let bytes = (str.chars().nth(i).unwrap() as i32).to_be_bytes();
-          self.data.extend(bytes);
-        }
-        return self;
-      }
-
-      while !str.is_empty() {
-        let slice = &str[..std::cmp::min(str.len(), 255)];
-        let len = slice.chars().count() as u8;
-
-        if len <= 2 {
-          self._opcode(opcodes::PUSH);
-        } else {
-          self._opcode(opcodes::PUSHALL);
-          self.data.push(len);
-        }
-
-        // Write as 4 bytes per char
-        self
-          .data
-          .extend(slice.chars().flat_map(|x| (x as i32).to_be_bytes()));
-
-        str = str[slice.len()..].to_string();
-      }
-
-      return self;
-    }
-
-    self._opcode(opcodes::PUSH);
-    self._value(item);
-
-    return self;
-  }
-
   pub fn label(&mut self, label: &str) -> &mut Self {
     self
       .labels
@@ -101,27 +59,31 @@ impl Bytecode {
     return self;
   }
 
-  pub fn push_all(&mut self, items: Vec<String>) -> &mut Self {
+  pub fn push_all(&mut self, items: Vec<u8>) -> &mut Self {
     self._opcode(opcodes::PUSHALL);
-    self.data.push(items.len() as u8);
-
-    for item in items {
-      self._value(item.as_str());
-    }
+    self.data.extend(StackValue::Usize(items.len()).to_bytes());
+    self.data.extend(items);
 
     return self;
   }
 
-  pub fn push(&mut self, items: Vec<String>) -> &mut Self {
-    if items.len() >= 2 {
-      return self.push_all(items);
+  pub fn push(&mut self, item: &[u8]) -> &mut Self {
+    for byte in item {
+      self._opcode(opcodes::PUSH);
+      self.data.push(*byte);
     }
-
-    for item in items {
-      self.push_one(item.as_str());
-    }
-
     return self;
+  }
+
+  pub fn push_values(&mut self, values: Vec<StackValue>) -> &mut Self {
+    let bytes = StackValue::vec_to_bytes(values);
+    let usize_len = std::mem::size_of::<usize>();
+
+    if bytes.len() >= usize_len {
+      return self.push_all(bytes);
+    }
+
+    return self.push(&bytes);
   }
 
   pub fn _write_char(&mut self, ch: char) -> &mut Self {
@@ -161,6 +123,12 @@ impl Bytecode {
     let value = i32::from_str_radix(result.as_str(), base).expect("Invalid hex number");
 
     self.data.extend(value.to_be_bytes());
+
+    return self;
+  }
+
+  pub fn _type(&mut self, data_type: DataType) -> &mut Self {
+    self.data.extend(data_type.to_bytes());
 
     return self;
   }
@@ -226,53 +194,63 @@ impl Bytecode {
     return self;
   }
 
-  pub fn copy(&mut self) -> &mut Self {
+  pub fn copy(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::COPY);
+    self._type(item_type);
     return self;
   }
 
-  pub fn pop(&mut self) -> &mut Self {
+  pub fn pop(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::POP);
+    self._type(item_type);
     return self;
   }
 
-  pub fn add(&mut self) -> &mut Self {
+  pub fn add(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::ADD);
+    self._type(item_type);
     return self;
   }
 
-  pub fn sub(&mut self) -> &mut Self {
+  pub fn sub(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::SUB);
+    self._type(item_type);
     return self;
   }
 
-  pub fn mul(&mut self) -> &mut Self {
+  pub fn mul(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::MUL);
+    self._type(item_type);
     return self;
   }
 
-  pub fn div(&mut self) -> &mut Self {
+  pub fn div(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::DIV);
+    self._type(item_type);
     return self;
   }
 
-  pub fn modulo(&mut self) -> &mut Self {
+  pub fn modulo(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::MOD);
+    self._type(item_type);
     return self;
   }
 
-  pub fn pow(&mut self) -> &mut Self {
+  pub fn pow(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::POW);
+    self._type(item_type);
     return self;
   }
 
-  pub fn inc(&mut self) -> &mut Self {
+  pub fn inc(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::INC);
+    self._type(item_type);
     return self;
   }
 
-  pub fn dec(&mut self) -> &mut Self {
+  pub fn dec(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::DEC);
+    self._type(item_type);
     return self;
   }
 
@@ -291,18 +269,39 @@ impl Bytecode {
     return self;
   }
 
-  pub fn lt(&mut self) -> &mut Self {
+  pub fn lt(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::LT);
+    self._type(item_type);
     return self;
   }
 
-  pub fn eq(&mut self) -> &mut Self {
+  pub fn eq(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::EQ);
+    self._type(item_type);
     return self;
   }
 
-  pub fn gt(&mut self) -> &mut Self {
+  pub fn neq(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::NEQ);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn gt(&mut self, item_type: DataType) -> &mut Self {
     self._opcode(opcodes::GT);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn gte(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::GTE);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn lte(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::LTE);
+    self._type(item_type);
     return self;
   }
 

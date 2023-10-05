@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::{DataType, StackValue};
+use super::DataType;
 
 pub const NOP: u8 = 0x00;
 pub const HALT: u8 = 0x01;
@@ -20,18 +20,21 @@ pub const WRITE: u8 = 0x0E;
 pub const JUMP: u8 = 0x0F;
 pub const CMP: u8 = 0x10;
 pub const LT: u8 = 0x11;
-pub const EQ: u8 = 0x12;
-pub const GT: u8 = 0x13;
-pub const MSP: u8 = 0x14;
-pub const SP: u8 = 0x15;
-pub const PC: u8 = 0x16;
+pub const LTE: u8 = 0x12;
+pub const EQ: u8 = 0x13;
+pub const NEQ: u8 = 0x14;
+pub const GT: u8 = 0x15;
+pub const GTE: u8 = 0x16;
+pub const MSP: u8 = 0x17;
+pub const SP: u8 = 0x18;
+pub const PC: u8 = 0x19;
 
 #[derive(Clone, Debug)]
 pub enum OpCode {
   NOP,
   HALT,
-  PUSH(StackValue),
-  PUSHALL(Vec<StackValue>),
+  PUSH(u8),
+  PUSHALL(Vec<u8>),
   POP(DataType),
   COPY(DataType),
   ADD(DataType),
@@ -44,10 +47,12 @@ pub enum OpCode {
   JUMP,
   INC(DataType),
   DEC(DataType),
-  LT(DataType),
   CMP,
   EQ(DataType),
+  LT(DataType),
   GT(DataType),
+  LTE(DataType),
+  GTE(DataType),
   MSP,
   SP,
   PC,

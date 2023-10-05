@@ -53,14 +53,8 @@ impl VM {
       match op.clone() {
         OpCode::NOP => (),
         OpCode::HALT => self.halt(),
-        OpCode::PUSH(value) => {
-          self.push(value);
-        }
-        OpCode::PUSHALL(values) => {
-          for value in values {
-            self.push(value);
-          }
-        }
+        OpCode::PUSH(value) => self.push(value),
+        OpCode::PUSHALL(values) => self.push_all(values),
         OpCode::INC(t) => self.inc(t),
         OpCode::DEC(t) => self.dec(t),
         OpCode::ADD(t) => self.add(t),
@@ -72,10 +66,12 @@ impl VM {
         OpCode::WRITE => self.write(),
         OpCode::JUMP => self.jump(),
         OpCode::COPY(t) => self.copy(t),
-        OpCode::LT(t) => self.lt(t),
         OpCode::CMP => self.cmp(),
         OpCode::EQ(t) => self.eq(t),
+        OpCode::LT(t) => self.lt(t),
         OpCode::GT(t) => self.gt(t),
+        OpCode::LTE(t) => self.lte(t),
+        OpCode::GTE(t) => self.gte(t),
         OpCode::POP(t) => self.pop(t),
         OpCode::MSP => self.move_sp(),
         OpCode::PC => self.pc(),
@@ -90,18 +86,60 @@ impl VM {
     self.running = false;
   }
 
-  fn push(&mut self, value: StackValue) {
-    self.stack.push(value.to_stack_bytes());
+  fn push(&mut self, value: u8) {
+    self.stack.push(vec![value]);
+  }
+
+  fn push_all(&mut self, values: Vec<u8>) {
+    self.stack.push(values);
   }
 
   fn inc(&mut self, t: DataType) {
-    self.push(StackValue::Usize(1));
-    self.add(t);
+    let value = self.stack.pop_value(&t);
+
+    let new_value = match value {
+      StackValue::U8(value) => StackValue::U8(value + 1),
+      StackValue::U16(value) => StackValue::U16(value + 1),
+      StackValue::U32(value) => StackValue::U32(value + 1),
+      StackValue::U64(value) => StackValue::U64(value + 1),
+      StackValue::I8(value) => StackValue::I8(value + 1),
+      StackValue::I16(value) => StackValue::I16(value + 1),
+      StackValue::I32(value) => StackValue::I32(value + 1),
+      StackValue::I64(value) => StackValue::I64(value + 1),
+      StackValue::F32(value) => StackValue::F32(value + 1.0),
+      StackValue::F64(value) => StackValue::F64(value + 1.0),
+      StackValue::Usize(value) => StackValue::Usize(value + 1),
+      _ => {
+        vm_panic("InvalidType", "Cannot increment non-integer value");
+        return;
+      }
+    };
+
+    self.stack.push_value(new_value)
   }
 
   fn dec(&mut self, t: DataType) {
-    self.push(StackValue::Usize(1));
-    self.sub(t);
+    let value = self.stack.pop_value(&t);
+
+    let new_value = match value {
+      StackValue::U8(value) => StackValue::U8(value - 1),
+      StackValue::U16(value) => StackValue::U16(value - 1),
+      StackValue::U32(value) => StackValue::U32(value - 1),
+      StackValue::U64(value) => StackValue::U64(value - 1),
+      StackValue::I8(value) => StackValue::I8(value - 1),
+      StackValue::I16(value) => StackValue::I16(value - 1),
+      StackValue::I32(value) => StackValue::I32(value - 1),
+      StackValue::I64(value) => StackValue::I64(value - 1),
+      StackValue::F32(value) => StackValue::F32(value - 1.0),
+      StackValue::F64(value) => StackValue::F64(value - 1.0),
+      StackValue::Usize(value) => StackValue::Usize(value - 1),
+      _ => {
+        vm_panic("InvalidType", "Cannot increment non-integer value");
+        return;
+      }
+    };
+
+    self.stack.push_value(new_value)
   }
 
   fn add(&mut self, t: DataType) {
@@ -130,7 +168,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn sub(&mut self, t: DataType) {
@@ -159,12 +197,13 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn mul(&mut self, t: DataType) {
     let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
     let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
 
     let result = match (a, b) {
       (StackValue::U8(a), StackValue::U8(b)) => StackValue::U8(a * b),
@@ -188,7 +227,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn div(&mut self, t: DataType) {
@@ -217,7 +256,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn modulo(&mut self, t: DataType) {
@@ -246,7 +285,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn pow(&mut self, t: DataType) {
@@ -277,7 +316,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn write(&mut self) {
@@ -362,28 +401,36 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
-  fn cmp(&mut self) {
-    let address = match self.stack.pop_value(&DataType::Usize) {
-      StackValue::Usize(value) => value,
-      _ => {
-        vm_panic("InvalidType", "Cannot jump to non-integer address");
-        return;
-      }
-    };
-    let value = match self.stack.pop_value(&DataType::Bool) {
-      StackValue::Bool(value) => value,
-      _ => {
-        vm_panic("InvalidType", "Cannot check non-boolean value");
+  fn lte(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    let result = match (a, b) {
+      (StackValue::U8(a), StackValue::U8(b)) => StackValue::Bool(a <= b),
+      (StackValue::U16(a), StackValue::U16(b)) => StackValue::Bool(a <= b),
+      (StackValue::U32(a), StackValue::U32(b)) => StackValue::Bool(a <= b),
+      (StackValue::U64(a), StackValue::U64(b)) => StackValue::Bool(a <= b),
+      (StackValue::I8(a), StackValue::I8(b)) => StackValue::Bool(a <= b),
+      (StackValue::I16(a), StackValue::I16(b)) => StackValue::Bool(a <= b),
+      (StackValue::I32(a), StackValue::I32(b)) => StackValue::Bool(a <= b),
+      (StackValue::I64(a), StackValue::I64(b)) => StackValue::Bool(a <= b),
+      (StackValue::F32(a), StackValue::F32(b)) => StackValue::Bool(a <= b),
+      (StackValue::F64(a), StackValue::F64(b)) => StackValue::Bool(a <= b),
+      (StackValue::Usize(a), StackValue::Usize(b)) => StackValue::Bool(a <= b),
+      (StackValue::Char(a), StackValue::Char(b)) => StackValue::Bool(a <= b),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot compare {:?} and {:?}", a, b).as_str(),
+        );
         return;
       }
     };
 
-    if value {
-      self.pc = address;
-    }
+    self.stack.push(result.to_bytes());
   }
 
   fn eq(&mut self, t: DataType) {
@@ -412,7 +459,7 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
   }
 
   fn gt(&mut self, t: DataType) {
@@ -441,7 +488,57 @@ impl VM {
       }
     };
 
-    self.stack.push(result.to_stack_bytes());
+    self.stack.push(result.to_bytes());
+  }
+
+  fn gte(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    let result = match (a, b) {
+      (StackValue::U8(a), StackValue::U8(b)) => StackValue::Bool(a >= b),
+      (StackValue::U16(a), StackValue::U16(b)) => StackValue::Bool(a >= b),
+      (StackValue::U32(a), StackValue::U32(b)) => StackValue::Bool(a >= b),
+      (StackValue::U64(a), StackValue::U64(b)) => StackValue::Bool(a >= b),
+      (StackValue::I8(a), StackValue::I8(b)) => StackValue::Bool(a >= b),
+      (StackValue::I16(a), StackValue::I16(b)) => StackValue::Bool(a >= b),
+      (StackValue::I32(a), StackValue::I32(b)) => StackValue::Bool(a >= b),
+      (StackValue::I64(a), StackValue::I64(b)) => StackValue::Bool(a >= b),
+      (StackValue::F32(a), StackValue::F32(b)) => StackValue::Bool(a >= b),
+      (StackValue::F64(a), StackValue::F64(b)) => StackValue::Bool(a >= b),
+      (StackValue::Usize(a), StackValue::Usize(b)) => StackValue::Bool(a >= b),
+      (StackValue::Char(a), StackValue::Char(b)) => StackValue::Bool(a >= b),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot compare {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    };
+
+    self.stack.push(result.to_bytes());
+  }
+
+  fn cmp(&mut self) {
+    let address = match self.stack.pop_value(&DataType::Usize) {
+      StackValue::Usize(value) => value,
+      _ => {
+        vm_panic("InvalidType", "Cannot jump to non-integer address");
+        return;
+      }
+    };
+    let value = match self.stack.pop_value(&DataType::Bool) {
+      StackValue::Bool(value) => value,
+      _ => {
+        vm_panic("InvalidType", "Cannot check non-boolean value");
+        return;
+      }
+    };
+
+    if value {
+      self.pc = address;
+    }
   }
 
   fn pop(&mut self, t: DataType) {
