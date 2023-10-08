@@ -1,3 +1,14 @@
-MOV %0 u8 1
+MOV %1 u8 0
 PUSH u8 1
-REG %0 u8
+
+@loop
+  REG %1 u8
+  INC u8
+  COPY u8
+  POP u8 %1
+  MUL u8
+  REG %1 u8
+  PUSH u8 5 ; Fatorial a ser calculado
+  LT u8
+  PUSH @loop
+  CMP

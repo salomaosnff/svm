@@ -57,7 +57,7 @@ impl Bytecode {
   pub fn label(&mut self, label: &str) -> &mut Self {
     self
       .labels
-      .insert(label.to_string(), self.instruction_count);
+      .insert(label.to_string(), self.instruction_count - 1);
     return self;
   }
 
@@ -367,9 +367,8 @@ impl Bytecode {
       bytes.splice(0..0, vec![0; 8 - bytes.len()]);
     }
 
-
     self.data.extend(bytes);
-    
+
     return self;
   }
 

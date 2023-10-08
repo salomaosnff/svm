@@ -315,7 +315,9 @@ fn parse_line(line: &str) -> Option<Instruction> {
     }
 
     if operand.starts_with("%") {
-      operands.push(Operand::Value(StackValue::U8(operand[1..].parse::<u8>().unwrap())));
+      operands.push(Operand::Value(StackValue::U8(
+        operand[1..].parse::<u8>().unwrap(),
+      )));
       continue;
     }
 
@@ -458,8 +460,6 @@ pub fn compile(source_file: File) -> Bytecode {
           "POP" => {
             let item_type = get_next_type(&mut opcode);
 
-            println!("{:#?}", opcode);
-
             let reg = match opcode.operands.get(0) {
               Some(Operand::Value(StackValue::U8(r))) => *r,
               _ => 0,
@@ -506,7 +506,7 @@ pub fn compile(source_file: File) -> Bytecode {
               Some(Operand::Value(v)) => v.clone(),
               _ => panic!("Expected value"),
             };
-            
+
             file.mov(register, value);
           }
           "REG" => {
@@ -516,7 +516,7 @@ pub fn compile(source_file: File) -> Bytecode {
             };
             let item_type = match opcode.operands.get(1) {
               Some(Operand::Type(t)) => t.clone(),
-              _ => panic!("Expected type"),
+              _ => DataType::I64,
             };
 
             file.reg(register, item_type);

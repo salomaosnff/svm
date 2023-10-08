@@ -2,6 +2,8 @@ use crate::lang::assembler::{DataType, StackValue, USIZE_LEN};
 
 use super::util::vm_panic;
 
+pub const MAX_REGISTER_COUNT: usize = 4;
+
 #[derive(Debug)]
 pub struct Stack {
   pub data: Vec<u8>,
@@ -16,7 +18,7 @@ impl Stack {
     Self {
       data: vec![],
       saves: vec![],
-      registers: vec![0; USIZE_LEN * 4],
+      registers: vec![0; USIZE_LEN * MAX_REGISTER_COUNT],
       size,
       sp: 0,
     }
@@ -184,24 +186,58 @@ impl Stack {
       vm_panic("RegisterOutOfBounds", "Register index out of bounds!");
     }
 
-    let start = register as usize * USIZE_LEN;
-    let end = start as usize + USIZE_LEN;
+    let end = ((register - 1) as usize * USIZE_LEN) + USIZE_LEN;
 
-    
-    let value = StackValue::from_stack_bytes(self.registers[start..end].to_vec(), item_type);
-    println!("start: {:?}", value);
-    
-    return value.to_bytes();
+    return match item_type {
+      DataType::Bool => self.registers[end - 1..end].to_vec(),
+      DataType::U8 => self.registers[end - 1..end].to_vec(),
+      DataType::I8 => self.registers[end - 1..end].to_vec(),
+      DataType::U16 => self.registers[end - 2..end].to_vec(),
+      DataType::I16 => self.registers[end - 2..end].to_vec(),
+      DataType::U32 => self.registers[end - 4..end].to_vec(),
+      DataType::I32 => self.registers[end - 4..end].to_vec(),
+      DataType::U64 => self.registers[end - 8..end].to_vec(),
+      DataType::I64 => self.registers[end - 8..end].to_vec(),
+      DataType::F32 => self.registers[end - 4..end].to_vec(),
+      DataType::F64 => self.registers[end - 8..end].to_vec(),
+      DataType::Usize => self.registers[end - USIZE_LEN..end].to_vec(),
+      DataType::Char => self.registers[end - USIZE_LEN..end].to_vec(),
+      DataType::String => {
+        let mut index = end;
+
+        while self.registers[index] != 0 {
+          index -= 1;
+        }
+
+        return self.registers[index + 1..end].to_vec();
+      }
+      _ => panic!("Cannot peek {item_type} from register!"),
+    };
   }
 
-  pub fn set_register(&mut self, index: u8, value: Vec<u8>) {
-    if index >= (self.registers.len() / USIZE_LEN) as u8 {
+  pub fn set_register(&mut self, register: u8, value: Vec<u8>) {
+    if register == 0 {
+      vm_panic("RegisterOutOfBounds", "Cannot set register 0!");
+    }
+
+    if register > MAX_REGISTER_COUNT as u8 {
       vm_panic("RegisterOutOfBounds", "Register index out of bounds!");
     }
 
-    let mut bytes = vec![0; USIZE_LEN];
-    bytes.splice(0..value.len(), value);
+    if value.len() > USIZE_LEN {
+      vm_panic(
+        "RegisterOverflow",
+        "Cannot set register with value larger than usize!",
+      );
+    }
 
-    self.registers.splice(index as usize..index as usize + USIZE_LEN, bytes);
+    let start = (register - 1) as usize * USIZE_LEN;
+    let end = start + USIZE_LEN;
+
+    let mut bytes = vec![0; USIZE_LEN];
+
+    bytes.splice(USIZE_LEN - value.len()..USIZE_LEN, value);
+
+    self.registers.splice(start..end, bytes);
   }
 }

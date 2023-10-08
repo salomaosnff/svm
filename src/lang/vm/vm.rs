@@ -83,7 +83,7 @@ impl VM {
         OpCode::SHL(t) => self.shl(t),
         OpCode::SHR(t) => self.shr(t),
         OpCode::MOV(reg, bytes) => self.mov(reg, bytes),
-        OpCode::REG(reg, item_type) => self.reg(reg, item_type)
+        OpCode::REG(reg, item_type) => self.reg(reg, item_type),
       };
 
       self.pc += 1;
@@ -387,6 +387,7 @@ impl VM {
 
   fn lt(&mut self, t: DataType) {
     let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
     let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
 
     let result = match (a, b) {
@@ -726,6 +727,11 @@ impl VM {
   }
 
   fn mov(&mut self, reg: u8, bytes: Vec<u8>) {
+    if reg == 0 {
+      vm_panic("InvalidRegister", "Cannot move to register 0");
+      return;
+    }
+
     self.stack.set_register(reg, bytes);
   }
 
