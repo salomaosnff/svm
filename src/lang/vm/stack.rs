@@ -1,13 +1,12 @@
-use crate::lang::assembler::{DataType, StackValue};
+use crate::lang::assembler::{DataType, StackValue, USIZE_LEN};
 
 use super::util::vm_panic;
-
-const USIZE_LEN: usize = std::mem::size_of::<usize>();
 
 #[derive(Debug)]
 pub struct Stack {
   pub data: Vec<u8>,
   pub saves: Vec<usize>,
+  pub registers: Vec<u8>,
   pub size: usize,
   pub sp: usize,
 }
@@ -17,6 +16,7 @@ impl Stack {
     Self {
       data: vec![],
       saves: vec![],
+      registers: vec![0; USIZE_LEN * 4],
       size,
       sp: 0,
     }
@@ -85,7 +85,7 @@ impl Stack {
         for _ in 0..size {
           let value = self.peek(value_type);
           let value_size = value.len();
-          
+
           self.sp -= value_size;
 
           let key = self.peek(key_type);
@@ -96,7 +96,6 @@ impl Stack {
           range.start = self.sp;
         }
 
-        
         self.restore();
 
         return &self.data[range];
@@ -107,7 +106,7 @@ impl Stack {
           _ => unreachable!(),
         };
 
-        return &self.data[self.sp - buffer_size..self.sp]
+        return &self.data[self.sp - buffer_size..self.sp];
       }
     }
   }
@@ -146,11 +145,11 @@ impl Stack {
     if self.sp == 0 {
       vm_panic("StackUnderflow", "Cannot pop from empty stack!");
     }
-    
+
     let result = self.peek(item_type).to_vec();
 
     self.data.splice(self.sp - result.len()..self.sp, vec![]);
-    
+
     self.sp -= result.len();
 
     return result;
@@ -178,5 +177,31 @@ impl Stack {
 
   pub fn dump(&self) -> &Vec<u8> {
     return &self.data;
+  }
+
+  pub fn peek_register(&mut self, register: u8, item_type: &DataType) -> Vec<u8> {
+    if register as usize >= (self.registers.len() / USIZE_LEN) {
+      vm_panic("RegisterOutOfBounds", "Register index out of bounds!");
+    }
+
+    let start = register as usize * USIZE_LEN;
+    let end = start as usize + USIZE_LEN;
+
+    
+    let value = StackValue::from_stack_bytes(self.registers[start..end].to_vec(), item_type);
+    println!("start: {:?}", value);
+    
+    return value.to_bytes();
+  }
+
+  pub fn set_register(&mut self, index: u8, value: Vec<u8>) {
+    if index >= (self.registers.len() / USIZE_LEN) as u8 {
+      vm_panic("RegisterOutOfBounds", "Register index out of bounds!");
+    }
+
+    let mut bytes = vec![0; USIZE_LEN];
+    bytes.splice(0..value.len(), value);
+
+    self.registers.splice(index as usize..index as usize + USIZE_LEN, bytes);
   }
 }

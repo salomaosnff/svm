@@ -1,3 +1,3 @@
-PUSH "Hello World!\n"
-PUSH usize 14 usize 1
-WRITE
+MOV %0 u8 1
+PUSH u8 1
+REG %0 u8

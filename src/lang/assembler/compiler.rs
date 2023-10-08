@@ -8,6 +8,7 @@ use super::{DataType, StackValue};
 pub enum Operand {
   Type(DataType),
   Value(StackValue),
+  Label(String),
 }
 
 #[derive(Debug)]
@@ -23,61 +24,65 @@ pub enum Instruction {
 }
 
 fn parse_number(number: &str, number_type: DataType) -> StackValue {
-  if number.starts_with("0x") {
+  let digits = &number.replace("0x", "").replace("0b", "").replace("0o", "");
+
+  let number_without_sign = number.replace("-", "").replace("+", "");
+
+  if number_without_sign.starts_with("0x") {
     return match number_type {
-      DataType::I8 => StackValue::I8(i8::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::I16 => StackValue::I16(i16::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::I32 => StackValue::I32(i32::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::I64 => StackValue::I64(i64::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::U8 => StackValue::U8(u8::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::U16 => StackValue::U16(u16::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::U32 => StackValue::U32(u32::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::U64 => StackValue::U64(u64::from_str_radix(&number[2..], 16).unwrap()),
-      DataType::Usize => StackValue::Usize(usize::from_str_radix(&number[2..], 16).unwrap()),
+      DataType::I8 => StackValue::I8(i8::from_str_radix(digits, 16).unwrap()),
+      DataType::I16 => StackValue::I16(i16::from_str_radix(digits, 16).unwrap()),
+      DataType::I32 => StackValue::I32(i32::from_str_radix(digits, 16).unwrap()),
+      DataType::I64 => StackValue::I64(i64::from_str_radix(digits, 16).unwrap()),
+      DataType::U8 => StackValue::U8(u8::from_str_radix(digits, 16).unwrap()),
+      DataType::U16 => StackValue::U16(u16::from_str_radix(digits, 16).unwrap()),
+      DataType::U32 => StackValue::U32(u32::from_str_radix(digits, 16).unwrap()),
+      DataType::U64 => StackValue::U64(u64::from_str_radix(digits, 16).unwrap()),
+      DataType::Usize => StackValue::Usize(usize::from_str_radix(digits, 16).unwrap()),
       _ => panic!("Cannot parse hex number to {number_type}"),
     };
   }
 
-  if number.starts_with("0o") {
+  if number_without_sign.starts_with("0o") {
     return match number_type {
-      DataType::I8 => StackValue::I8(i8::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::I16 => StackValue::I16(i16::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::I32 => StackValue::I32(i32::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::I64 => StackValue::I64(i64::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::U8 => StackValue::U8(u8::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::U16 => StackValue::U16(u16::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::U32 => StackValue::U32(u32::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::U64 => StackValue::U64(u64::from_str_radix(&number[2..], 8).unwrap()),
-      DataType::Usize => StackValue::Usize(usize::from_str_radix(&number[2..], 16).unwrap()),
+      DataType::I8 => StackValue::I8(i8::from_str_radix(digits, 8).unwrap()),
+      DataType::I16 => StackValue::I16(i16::from_str_radix(digits, 8).unwrap()),
+      DataType::I32 => StackValue::I32(i32::from_str_radix(digits, 8).unwrap()),
+      DataType::I64 => StackValue::I64(i64::from_str_radix(digits, 8).unwrap()),
+      DataType::U8 => StackValue::U8(u8::from_str_radix(digits, 8).unwrap()),
+      DataType::U16 => StackValue::U16(u16::from_str_radix(digits, 8).unwrap()),
+      DataType::U32 => StackValue::U32(u32::from_str_radix(digits, 8).unwrap()),
+      DataType::U64 => StackValue::U64(u64::from_str_radix(digits, 8).unwrap()),
+      DataType::Usize => StackValue::Usize(usize::from_str_radix(digits, 16).unwrap()),
       _ => panic!("Cannot parse oct number to {number_type}"),
     };
   }
 
-  if number.starts_with("0b") {
+  if number_without_sign.starts_with("0b") {
     return match number_type {
-      DataType::I8 => StackValue::I8(i8::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::I16 => StackValue::I16(i16::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::I32 => StackValue::I32(i32::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::I64 => StackValue::I64(i64::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::U8 => StackValue::U8(u8::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::U16 => StackValue::U16(u16::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::U32 => StackValue::U32(u32::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::U64 => StackValue::U64(u64::from_str_radix(&number[2..], 2).unwrap()),
-      DataType::Usize => StackValue::Usize(usize::from_str_radix(&number[2..], 16).unwrap()),
+      DataType::I8 => StackValue::I8(i8::from_str_radix(digits, 2).unwrap()),
+      DataType::I16 => StackValue::I16(i16::from_str_radix(digits, 2).unwrap()),
+      DataType::I32 => StackValue::I32(i32::from_str_radix(digits, 2).unwrap()),
+      DataType::I64 => StackValue::I64(i64::from_str_radix(digits, 2).unwrap()),
+      DataType::U8 => StackValue::U8(u8::from_str_radix(digits, 2).unwrap()),
+      DataType::U16 => StackValue::U16(u16::from_str_radix(digits, 2).unwrap()),
+      DataType::U32 => StackValue::U32(u32::from_str_radix(digits, 2).unwrap()),
+      DataType::U64 => StackValue::U64(u64::from_str_radix(digits, 2).unwrap()),
+      DataType::Usize => StackValue::Usize(usize::from_str_radix(digits, 16).unwrap()),
       _ => panic!("Cannot parse bin number to {number_type}"),
     };
   }
 
   match number_type {
-    DataType::I8 => StackValue::I8(i8::from_str_radix(number, 10).unwrap()),
-    DataType::I16 => StackValue::I16(i16::from_str_radix(number, 10).unwrap()),
-    DataType::I32 => StackValue::I32(i32::from_str_radix(number, 10).unwrap()),
-    DataType::I64 => StackValue::I64(i64::from_str_radix(number, 10).unwrap()),
-    DataType::U8 => StackValue::U8(u8::from_str_radix(number, 10).unwrap()),
-    DataType::U16 => StackValue::U16(u16::from_str_radix(number, 10).unwrap()),
-    DataType::U32 => StackValue::U32(u32::from_str_radix(number, 10).unwrap()),
-    DataType::U64 => StackValue::U64(u64::from_str_radix(number, 10).unwrap()),
-    DataType::Usize => StackValue::Usize(usize::from_str_radix(number, 10).unwrap()),
+    DataType::I8 => StackValue::I8(i8::from_str_radix(digits, 10).unwrap()),
+    DataType::I16 => StackValue::I16(i16::from_str_radix(digits, 10).unwrap()),
+    DataType::I32 => StackValue::I32(i32::from_str_radix(digits, 10).unwrap()),
+    DataType::I64 => StackValue::I64(i64::from_str_radix(digits, 10).unwrap()),
+    DataType::U8 => StackValue::U8(u8::from_str_radix(digits, 10).unwrap()),
+    DataType::U16 => StackValue::U16(u16::from_str_radix(digits, 10).unwrap()),
+    DataType::U32 => StackValue::U32(u32::from_str_radix(digits, 10).unwrap()),
+    DataType::U64 => StackValue::U64(u64::from_str_radix(digits, 10).unwrap()),
+    DataType::Usize => StackValue::Usize(usize::from_str_radix(digits, 10).unwrap()),
     _ => panic!("Cannot parse dec number to {number_type}"),
   }
 }
@@ -121,41 +126,46 @@ fn parse_line(line: &str) -> Option<Instruction> {
       break;
     }
 
-    let number = if line.starts_with("0x") {
-      let mut number: String = line[0..2].to_string();
-      line = line[2..].to_string();
+    let number = {
+      let mut result = String::new();
 
-      while line.len() > 0 && line.chars().next().unwrap().is_ascii_hexdigit() {
-        number.push(line.remove(0));
+      if line.starts_with("-") || line.starts_with("+") {
+        result.push(line.remove(0))
       }
 
-      number
-    } else if line.starts_with("0b") {
-      let mut number: String = line[0..2].to_string();
-      line = line[2..].to_string();
+      if line.starts_with("0x") {
+        result.push_str("0x");
+        line = line[2..].to_string();
 
-      while line.len() > 0 && line.chars().next().unwrap().is_ascii_hexdigit() {
-        number.push(line.remove(0));
+        while !line.is_empty() && line.chars().next().unwrap().is_digit(16) {
+          result.push(line.remove(0));
+        }
+      } else if line.starts_with("0o") {
+        result.push_str("0o");
+        line = line[2..].to_string();
+
+        while !line.is_empty() && line.chars().next().unwrap().is_digit(8) {
+          result.push(line.remove(0));
+        }
+      } else if line.starts_with("0b") {
+        result.push_str("0b");
+        line = line[2..].to_string();
+
+        while !line.is_empty() && line.chars().next().unwrap().is_digit(2) {
+          result.push(line.remove(0));
+        }
+      } else if line.chars().next().unwrap().is_digit(10) {
+        while !line.is_empty() && line.chars().next().unwrap().is_digit(10) {
+          result.push(line.remove(0));
+        }
       }
 
-      number
-    } else if line.starts_with("0o") {
-      let mut number: String = line[0..2].to_string();
-      line = line[2..].to_string();
-
-      while line.len() > 0 && line.chars().next().unwrap().is_ascii_hexdigit() {
-        number.push(line.remove(0));
+      if result == "-" {
+        line = format!("-{}", line);
+        result.clear();
       }
 
-      number
-    } else {
-      let mut number = String::new();
-
-      while line.len() > 0 && line.chars().next().unwrap().is_ascii_digit() {
-        number.push(line.remove(0));
-      }
-
-      number
+      result
     };
 
     // parse number
@@ -229,6 +239,8 @@ fn parse_line(line: &str) -> Option<Instruction> {
 
     // parse char
     if line.starts_with("'") {
+      line.remove(0);
+
       let mut string = String::new();
 
       while !line.is_empty() && !line.starts_with("'") {
@@ -297,6 +309,16 @@ fn parse_line(line: &str) -> Option<Instruction> {
       }
     }
 
+    if operand.starts_with("@") {
+      operands.push(Operand::Label(operand[1..].to_string()));
+      continue;
+    }
+
+    if operand.starts_with("%") {
+      operands.push(Operand::Value(StackValue::U8(operand[1..].parse::<u8>().unwrap())));
+      continue;
+    }
+
     if !operand.is_empty() {
       match operand.as_str() {
         "i8" => operands.push(Operand::Type(DataType::I8)),
@@ -351,7 +373,14 @@ pub fn compile(source_file: File) -> Bytecode {
               .iter()
               .map(|operand| match operand {
                 Operand::Value(value) => value.clone(),
-                _ => panic!("Expected value"),
+                Operand::Label(label) => StackValue::Usize(
+                  file
+                    .labels
+                    .get(label.as_str())
+                    .expect(format!("Label {} not found", label).as_str())
+                    .clone(),
+                ),
+                c => panic!("Invalid operand {:?}", c),
               })
               .collect::<Vec<StackValue>>();
 
@@ -427,16 +456,70 @@ pub fn compile(source_file: File) -> Bytecode {
             file.dec(item_type);
           }
           "POP" => {
-            let item_type = if opcode.operands.len() > 0 {
-              match opcode.operands.remove(0) {
-                Operand::Type(item_type) => item_type,
-                _ => DataType::I32,
-              }
-            } else {
-              DataType::I32
+            let item_type = get_next_type(&mut opcode);
+
+            println!("{:#?}", opcode);
+
+            let reg = match opcode.operands.get(0) {
+              Some(Operand::Value(StackValue::U8(r))) => *r,
+              _ => 0,
             };
 
-            file.pop(item_type);
+            file.pop(item_type, reg);
+          }
+          "AND" => {
+            let item_type = get_next_type(&mut opcode);
+            file.and(item_type);
+          }
+          "OR" => {
+            let item_type = get_next_type(&mut opcode);
+            file.or(item_type);
+          }
+          "XOR" => {
+            let item_type = get_next_type(&mut opcode);
+            file.xor(item_type);
+          }
+          "NOT" => {
+            let item_type = get_next_type(&mut opcode);
+            file.not(item_type);
+          }
+          "SHL" => {
+            let item_type = get_next_type(&mut opcode);
+            file.shl(item_type);
+          }
+          "SHR" => {
+            let item_type = get_next_type(&mut opcode);
+            file.shr(item_type);
+          }
+          "SP" => {
+            file.sp();
+          }
+          "PC" => {
+            file.pc();
+          }
+          "MOV" => {
+            let register = match opcode.operands.get(0) {
+              Some(Operand::Value(StackValue::U8(r))) => *r,
+              _ => panic!("Expected register"),
+            };
+            let value = match opcode.operands.get(1) {
+              Some(Operand::Value(v)) => v.clone(),
+              _ => panic!("Expected value"),
+            };
+            
+            file.mov(register, value);
+          }
+          "REG" => {
+            let register = match opcode.operands.get(0) {
+              Some(Operand::Value(StackValue::U8(r))) => *r,
+              _ => panic!("Expected register"),
+            };
+            let item_type = match opcode.operands.get(1) {
+              Some(Operand::Type(t)) => t.clone(),
+              _ => panic!("Expected type"),
+            };
+
+            file.reg(register, item_type);
           }
           _ => panic!("Opcode {:#?} not implemented in compiler", opcode),
         };

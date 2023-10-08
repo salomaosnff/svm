@@ -2,9 +2,11 @@ use std::collections::HashMap;
 
 use super::{opcodes, DataType, StackValue};
 
+pub const USIZE_LEN: usize = std::mem::size_of::<usize>();
+
 pub struct Bytecode {
   pub data: Vec<u8>,
-  labels: HashMap<String, i32>,
+  pub labels: HashMap<String, usize>,
   instruction_count: usize,
 }
 
@@ -55,7 +57,7 @@ impl Bytecode {
   pub fn label(&mut self, label: &str) -> &mut Self {
     self
       .labels
-      .insert(label.to_string(), self.instruction_count as i32 - 1);
+      .insert(label.to_string(), self.instruction_count);
     return self;
   }
 
@@ -77,9 +79,8 @@ impl Bytecode {
 
   pub fn push_values(&mut self, values: Vec<StackValue>) -> &mut Self {
     let bytes = StackValue::vec_to_bytes(values);
-    let usize_len = std::mem::size_of::<usize>();
 
-    if bytes.len() >= usize_len {
+    if bytes.len() >= USIZE_LEN {
       return self.push_all(bytes);
     }
 
@@ -200,9 +201,10 @@ impl Bytecode {
     return self;
   }
 
-  pub fn pop(&mut self, item_type: DataType) -> &mut Self {
+  pub fn pop(&mut self, item_type: DataType, reg: u8) -> &mut Self {
     self._opcode(opcodes::POP);
     self._type(item_type);
+    self.data.push(reg);
     return self;
   }
 
@@ -317,6 +319,64 @@ impl Bytecode {
 
   pub fn pc(&mut self) -> &mut Self {
     self._opcode(opcodes::PC);
+    return self;
+  }
+
+  pub fn and(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::AND);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn or(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::OR);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn xor(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::XOR);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn not(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::NOT);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn shl(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::SHL);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn shr(&mut self, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::SHR);
+    self._type(item_type);
+    return self;
+  }
+
+  pub fn mov(&mut self, register: u8, value: StackValue) -> &mut Self {
+    self._opcode(opcodes::MOV);
+    self.data.push(register);
+    let mut bytes = value.to_bytes();
+
+    if bytes.len() < 8 {
+      bytes.splice(0..0, vec![0; 8 - bytes.len()]);
+    }
+
+
+    self.data.extend(bytes);
+    
+    return self;
+  }
+
+  pub fn reg(&mut self, register: u8, item_type: DataType) -> &mut Self {
+    self._opcode(opcodes::REG);
+    self.data.push(register);
+    self._type(item_type);
     return self;
   }
 }

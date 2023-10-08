@@ -206,17 +206,17 @@ impl StackValue {
 
   pub fn from_stack_bytes(data: Vec<u8>, data_type: &DataType) -> Self {
     return match data_type {
-      DataType::U8 => StackValue::U8(u8::from_be_bytes(data.try_into().unwrap())),
-      DataType::I8 => StackValue::I8(i8::from_be_bytes(data.try_into().unwrap())),
-      DataType::U16 => StackValue::U16(u16::from_be_bytes(data.try_into().unwrap())),
-      DataType::I16 => StackValue::I16(i16::from_be_bytes(data.try_into().unwrap())),
-      DataType::U32 => StackValue::U32(u32::from_be_bytes(data.try_into().unwrap())),
-      DataType::I32 => StackValue::I32(i32::from_be_bytes(data.try_into().unwrap())),
-      DataType::U64 => StackValue::U64(u64::from_be_bytes(data.try_into().unwrap())),
-      DataType::I64 => StackValue::I64(i64::from_be_bytes(data.try_into().unwrap())),
-      DataType::F32 => StackValue::F32(f32::from_be_bytes(data.try_into().unwrap())),
-      DataType::F64 => StackValue::F64(f64::from_be_bytes(data.try_into().unwrap())),
-      DataType::Usize => StackValue::Usize(usize::from_be_bytes(data.try_into().unwrap())),
+      DataType::U8 => StackValue::U8(u8::from_be_bytes(data[0..1].try_into().unwrap())),
+      DataType::I8 => StackValue::I8(i8::from_be_bytes(data[0..1].try_into().unwrap())),
+      DataType::U16 => StackValue::U16(u16::from_be_bytes(data[0..2].try_into().unwrap())),
+      DataType::I16 => StackValue::I16(i16::from_be_bytes(data[0..2].try_into().unwrap())),
+      DataType::U32 => StackValue::U32(u32::from_be_bytes(data[0..4].try_into().unwrap())),
+      DataType::I32 => StackValue::I32(i32::from_be_bytes(data[0..4].try_into().unwrap())),
+      DataType::U64 => StackValue::U64(u64::from_be_bytes(data[0..8].try_into().unwrap())),
+      DataType::I64 => StackValue::I64(i64::from_be_bytes(data[0..8].try_into().unwrap())),
+      DataType::F32 => StackValue::F32(f32::from_be_bytes(data[0..4].try_into().unwrap())),
+      DataType::F64 => StackValue::F64(f64::from_be_bytes(data[0..8].try_into().unwrap())),
+      DataType::Usize => StackValue::Usize(usize::from_be_bytes(data[0..8].try_into().unwrap())),
       DataType::Bool => StackValue::Bool(data[0] != 0),
       DataType::Char => StackValue::Char(char::from_u32(u32::from_be_bytes(data.try_into().unwrap())).unwrap()),
       DataType::String => {

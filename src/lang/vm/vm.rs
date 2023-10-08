@@ -72,10 +72,18 @@ impl VM {
         OpCode::GT(t) => self.gt(t),
         OpCode::LTE(t) => self.lte(t),
         OpCode::GTE(t) => self.gte(t),
-        OpCode::POP(t) => self.pop(t),
+        OpCode::POP(t, r) => self.pop(t, r),
         OpCode::MSP => self.move_sp(),
         OpCode::PC => self.pc(),
         OpCode::SP => self.sp(),
+        OpCode::AND(t) => self.and(t),
+        OpCode::OR(t) => self.or(t),
+        OpCode::XOR(t) => self.xor(t),
+        OpCode::NOT(t) => self.not(t),
+        OpCode::SHL(t) => self.shl(t),
+        OpCode::SHR(t) => self.shr(t),
+        OpCode::MOV(reg, bytes) => self.mov(reg, bytes),
+        OpCode::REG(reg, item_type) => self.reg(reg, item_type)
       };
 
       self.pc += 1;
@@ -203,7 +211,6 @@ impl VM {
   fn mul(&mut self, t: DataType) {
     let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
     let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
-
 
     let result = match (a, b) {
       (StackValue::U8(a), StackValue::U8(b)) => StackValue::U8(a * b),
@@ -337,7 +344,10 @@ impl VM {
     let offset = match self.stack.pop_value(&DataType::Usize) {
       StackValue::Usize(value) => value,
       _ => {
-        vm_panic("InvalidType", "Cannot move stack pointer by non-integer value");
+        vm_panic(
+          "InvalidType",
+          "Cannot move stack pointer by non-integer value",
+        );
         return;
       }
     };
@@ -541,7 +551,186 @@ impl VM {
     }
   }
 
-  fn pop(&mut self, t: DataType) {
-    self.stack.pop(&t);
+  fn pop(&mut self, t: DataType, r: u8) {
+    let value = self.stack.pop(&t);
+
+    if r > 0 {
+      self.stack.set_register(r, value);
+    }
+  }
+
+  fn and(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    match (a, b) {
+      (StackValue::Bool(a), StackValue::Bool(b)) => self.stack.push_value(StackValue::Bool(a && b)),
+      (StackValue::U8(a), StackValue::U8(b)) => self.stack.push_value(StackValue::U8(a & b)),
+      (StackValue::U16(a), StackValue::U16(b)) => self.stack.push_value(StackValue::U16(a & b)),
+      (StackValue::U32(a), StackValue::U32(b)) => self.stack.push_value(StackValue::U32(a & b)),
+      (StackValue::U64(a), StackValue::U64(b)) => self.stack.push_value(StackValue::U64(a & b)),
+      (StackValue::I8(a), StackValue::I8(b)) => self.stack.push_value(StackValue::I8(a & b)),
+      (StackValue::I16(a), StackValue::I16(b)) => self.stack.push_value(StackValue::I16(a & b)),
+      (StackValue::I32(a), StackValue::I32(b)) => self.stack.push_value(StackValue::I32(a & b)),
+      (StackValue::I64(a), StackValue::I64(b)) => self.stack.push_value(StackValue::I64(a & b)),
+      (StackValue::Usize(a), StackValue::Usize(b)) => {
+        self.stack.push_value(StackValue::Usize(a & b))
+      }
+      (StackValue::Char(a), StackValue::Char(b)) => self
+        .stack
+        .push_value(StackValue::Char((a as u8 & b as u8) as char)),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot and {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    };
+  }
+
+  fn or(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    match (a, b) {
+      (StackValue::Bool(a), StackValue::Bool(b)) => self.stack.push_value(StackValue::Bool(a || b)),
+      (StackValue::U8(a), StackValue::U8(b)) => self.stack.push_value(StackValue::U8(a | b)),
+      (StackValue::U16(a), StackValue::U16(b)) => self.stack.push_value(StackValue::U16(a | b)),
+      (StackValue::U32(a), StackValue::U32(b)) => self.stack.push_value(StackValue::U32(a | b)),
+      (StackValue::U64(a), StackValue::U64(b)) => self.stack.push_value(StackValue::U64(a | b)),
+      (StackValue::I8(a), StackValue::I8(b)) => self.stack.push_value(StackValue::I8(a | b)),
+      (StackValue::I16(a), StackValue::I16(b)) => self.stack.push_value(StackValue::I16(a | b)),
+      (StackValue::I32(a), StackValue::I32(b)) => self.stack.push_value(StackValue::I32(a | b)),
+      (StackValue::I64(a), StackValue::I64(b)) => self.stack.push_value(StackValue::I64(a | b)),
+      (StackValue::Usize(a), StackValue::Usize(b)) => {
+        self.stack.push_value(StackValue::Usize(a | b))
+      }
+      (StackValue::Char(a), StackValue::Char(b)) => self
+        .stack
+        .push_value(StackValue::Char((a as u8 | b as u8) as char)),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot or {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    }
+  }
+
+  fn xor(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    match (a, b) {
+      (StackValue::Bool(a), StackValue::Bool(b)) => self.stack.push_value(StackValue::Bool(a ^ b)),
+      (StackValue::U8(a), StackValue::U8(b)) => self.stack.push_value(StackValue::U8(a ^ b)),
+      (StackValue::U16(a), StackValue::U16(b)) => self.stack.push_value(StackValue::U16(a ^ b)),
+      (StackValue::U32(a), StackValue::U32(b)) => self.stack.push_value(StackValue::U32(a ^ b)),
+      (StackValue::U64(a), StackValue::U64(b)) => self.stack.push_value(StackValue::U64(a ^ b)),
+      (StackValue::I8(a), StackValue::I8(b)) => self.stack.push_value(StackValue::I8(a ^ b)),
+      (StackValue::I16(a), StackValue::I16(b)) => self.stack.push_value(StackValue::I16(a ^ b)),
+      (StackValue::I32(a), StackValue::I32(b)) => self.stack.push_value(StackValue::I32(a ^ b)),
+      (StackValue::I64(a), StackValue::I64(b)) => self.stack.push_value(StackValue::I64(a ^ b)),
+      (StackValue::Usize(a), StackValue::Usize(b)) => {
+        self.stack.push_value(StackValue::Usize(a ^ b))
+      }
+      (StackValue::Char(a), StackValue::Char(b)) => self
+        .stack
+        .push_value(StackValue::Char((a as u8 ^ b as u8) as char)),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot xor {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    }
+  }
+
+  fn not(&mut self, t: DataType) {
+    let a = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+
+    match a {
+      StackValue::Bool(a) => self.stack.push_value(StackValue::Bool(!a)),
+      StackValue::U8(a) => self.stack.push_value(StackValue::U8(!a)),
+      StackValue::U16(a) => self.stack.push_value(StackValue::U16(!a)),
+      StackValue::U32(a) => self.stack.push_value(StackValue::U32(!a)),
+      StackValue::U64(a) => self.stack.push_value(StackValue::U64(!a)),
+      StackValue::I8(a) => self.stack.push_value(StackValue::I8(!a)),
+      StackValue::I16(a) => self.stack.push_value(StackValue::I16(!a)),
+      StackValue::I32(a) => self.stack.push_value(StackValue::I32(!a)),
+      StackValue::I64(a) => self.stack.push_value(StackValue::I64(!a)),
+      StackValue::Usize(a) => self.stack.push_value(StackValue::Usize(!a)),
+      a => {
+        vm_panic("InvalidType", format!("Cannot not {:?}", a).as_str());
+        return;
+      }
+    }
+  }
+
+  fn shl(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&DataType::U8), &DataType::U8);
+
+    match (a, b) {
+      (StackValue::U8(a), StackValue::U8(b)) => self.stack.push_value(StackValue::U8(a << b)),
+      (StackValue::U16(a), StackValue::U16(b)) => self.stack.push_value(StackValue::U16(a << b)),
+      (StackValue::U32(a), StackValue::U32(b)) => self.stack.push_value(StackValue::U32(a << b)),
+      (StackValue::U64(a), StackValue::U64(b)) => self.stack.push_value(StackValue::U64(a << b)),
+      (StackValue::I8(a), StackValue::I8(b)) => self.stack.push_value(StackValue::I8(a << b)),
+      (StackValue::I16(a), StackValue::I16(b)) => self.stack.push_value(StackValue::I16(a << b)),
+      (StackValue::I32(a), StackValue::I32(b)) => self.stack.push_value(StackValue::I32(a << b)),
+      (StackValue::I64(a), StackValue::I64(b)) => self.stack.push_value(StackValue::I64(a << b)),
+      (StackValue::Usize(a), StackValue::Usize(b)) => {
+        self.stack.push_value(StackValue::Usize(a << b))
+      }
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot shl {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    }
+  }
+
+  fn shr(&mut self, t: DataType) {
+    let b = StackValue::from_stack_bytes(self.stack.pop(&t), &t);
+    let a = StackValue::from_stack_bytes(self.stack.pop(&DataType::U8), &DataType::U8);
+
+    match (a, b) {
+      (StackValue::U8(a), StackValue::U8(b)) => self.stack.push_value(StackValue::U8(a >> b)),
+      (StackValue::U16(a), StackValue::U16(b)) => self.stack.push_value(StackValue::U16(a >> b)),
+      (StackValue::U32(a), StackValue::U32(b)) => self.stack.push_value(StackValue::U32(a >> b)),
+      (StackValue::U64(a), StackValue::U64(b)) => self.stack.push_value(StackValue::U64(a >> b)),
+      (StackValue::I8(a), StackValue::I8(b)) => self.stack.push_value(StackValue::I8(a >> b)),
+      (StackValue::I16(a), StackValue::I16(b)) => self.stack.push_value(StackValue::I16(a >> b)),
+      (StackValue::I32(a), StackValue::I32(b)) => self.stack.push_value(StackValue::I32(a >> b)),
+      (StackValue::I64(a), StackValue::I64(b)) => self.stack.push_value(StackValue::I64(a >> b)),
+      (StackValue::Usize(a), StackValue::Usize(b)) => {
+        self.stack.push_value(StackValue::Usize(a >> b))
+      }
+      (StackValue::Char(a), StackValue::Char(b)) => self
+        .stack
+        .push_value(StackValue::Char((a as u8 >> b as u8) as char)),
+      (a, b) => {
+        vm_panic(
+          "InvalidType",
+          format!("Cannot shr {:?} and {:?}", a, b).as_str(),
+        );
+        return;
+      }
+    }
+  }
+
+  fn mov(&mut self, reg: u8, bytes: Vec<u8>) {
+    self.stack.set_register(reg, bytes);
+  }
+
+  fn reg(&mut self, reg: u8, item_type: DataType) {
+    let value = self.stack.peek_register(reg, &item_type);
+    self.stack.push(value);
   }
 }

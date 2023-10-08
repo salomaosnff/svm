@@ -1,4 +1,4 @@
-use std::{time::Instant, env, fs::File, io::Write};
+use std::{time::Instant, env, fs::File, io::Write, process::exit};
 
 mod lang;
 
@@ -7,6 +7,7 @@ use crate::lang::{
 };
 
 fn run<U, T: FnOnce() -> U>(name: &str, f: T) -> U {
+
   let now = Instant::now();
   let result = f();
   let elapsed = now.elapsed();

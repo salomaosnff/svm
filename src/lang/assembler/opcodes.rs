@@ -28,6 +28,14 @@ pub const GTE: u8 = 0x16;
 pub const MSP: u8 = 0x17;
 pub const SP: u8 = 0x18;
 pub const PC: u8 = 0x19;
+pub const AND: u8 = 0x1A;
+pub const OR: u8 = 0x1B;
+pub const XOR: u8 = 0x1C;
+pub const NOT: u8 = 0x1D;
+pub const SHL: u8 = 0x1E;
+pub const SHR: u8 = 0x1F;
+pub const MOV: u8 = 0x20;
+pub const REG: u8 = 0x21;
 
 #[derive(Clone, Debug)]
 pub enum OpCode {
@@ -35,7 +43,7 @@ pub enum OpCode {
   HALT,
   PUSH(u8),
   PUSHALL(Vec<u8>),
-  POP(DataType),
+  POP(DataType, u8),
   COPY(DataType),
   ADD(DataType),
   SUB(DataType),
@@ -56,4 +64,12 @@ pub enum OpCode {
   MSP,
   SP,
   PC,
+  AND(DataType),
+  OR(DataType),
+  XOR(DataType),
+  NOT(DataType),
+  SHL(DataType),
+  SHR(DataType),
+  MOV(u8, Vec<u8>),
+  REG(u8, DataType),
 }
