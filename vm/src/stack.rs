@@ -1,6 +1,7 @@
 const USIZE_LEN: usize = std::mem::size_of::<usize>();
+const ISIZE_LEN: usize = std::mem::size_of::<isize>();
 
-use svm_lang::{DataType, Value};
+use svm_lang::{Type, Value};
 
 use super::util::vm_panic;
 
@@ -48,28 +49,29 @@ impl Stack {
     return &self.data[range];
   }
 
-  pub fn peek(&mut self, item_type: &DataType) -> &[u8] {
+  pub fn peek(&mut self, item_type: &Type) -> &[u8] {
     if self.sp == 0 {
       vm_panic("StackUnderflow", "Cannot peek from empty stack!");
     }
 
     match item_type {
-      DataType::U8 => self.read_bytes(1),
-      DataType::U16 => self.read_bytes(2),
-      DataType::U32 => self.read_bytes(4),
-      DataType::U64 => self.read_bytes(8),
-      DataType::I8 => self.read_bytes(1),
-      DataType::I16 => self.read_bytes(2),
-      DataType::I32 => self.read_bytes(4),
-      DataType::I64 => self.read_bytes(8),
-      DataType::F32 => self.read_bytes(4),
-      DataType::F64 => self.read_bytes(8),
-      DataType::Usize => self.read_bytes(std::mem::size_of::<usize>()),
-      DataType::Bool => self.read_bytes(1),
+      Type::U8 => self.read_bytes(1),
+      Type::U16 => self.read_bytes(2),
+      Type::U32 => self.read_bytes(4),
+      Type::U64 => self.read_bytes(8),
+      Type::I8 => self.read_bytes(1),
+      Type::I16 => self.read_bytes(2),
+      Type::I32 => self.read_bytes(4),
+      Type::I64 => self.read_bytes(8),
+      Type::F32 => self.read_bytes(4),
+      Type::F64 => self.read_bytes(8),
+      Type::Usize => self.read_bytes(USIZE_LEN),
+      Type::Isize => self.read_bytes(ISIZE_LEN),
+      Type::Bool => self.read_bytes(1),
     }
   }
 
-  pub fn peek_value(&mut self, item_type: &DataType) -> Value {
+  pub fn peek_value(&mut self, item_type: &Type) -> Value {
     return Value::from_stack_bytes(self.peek(item_type).to_vec(), item_type);
   }
 
@@ -99,7 +101,7 @@ impl Stack {
     self.sp += buffer_size;
   }
 
-  pub fn pop(&mut self, item_type: &DataType) -> Vec<u8> {
+  pub fn pop(&mut self, item_type: &Type) -> Vec<u8> {
     if self.sp == 0 {
       vm_panic("StackUnderflow", "Cannot pop from empty stack!");
     }
@@ -113,7 +115,7 @@ impl Stack {
     return result;
   }
 
-  pub fn pop_value(&mut self, item_type: &DataType) -> Value {
+  pub fn pop_value(&mut self, item_type: &Type) -> Value {
     return Value::from_stack_bytes(self.pop(item_type), item_type);
   }
 
@@ -137,27 +139,16 @@ impl Stack {
     return &self.data;
   }
 
-  pub fn peek_register(&mut self, register: u8, item_type: &DataType) -> Vec<u8> {
-    if register as usize >= (self.registers.len() / USIZE_LEN) {
+  pub fn peek_register(&mut self, register: u8, item_type: &Type) -> Vec<u8> {
+    if (register as usize - 1) >= (self.registers.len() / USIZE_LEN) {
       vm_panic("RegisterOutOfBounds", "Register index out of bounds!");
     }
 
-    let end = ((register - 1) as usize * USIZE_LEN) + USIZE_LEN;
+    let size = item_type.size();
+    let start = ((register as usize) * USIZE_LEN) - size;
+    let end = start + size;
 
-    return match item_type {
-      DataType::Bool => self.registers[end - 1..end].to_vec(),
-      DataType::U8 => self.registers[end - 1..end].to_vec(),
-      DataType::I8 => self.registers[end - 1..end].to_vec(),
-      DataType::U16 => self.registers[end - 2..end].to_vec(),
-      DataType::I16 => self.registers[end - 2..end].to_vec(),
-      DataType::U32 => self.registers[end - 4..end].to_vec(),
-      DataType::I32 => self.registers[end - 4..end].to_vec(),
-      DataType::U64 => self.registers[end - 8..end].to_vec(),
-      DataType::I64 => self.registers[end - 8..end].to_vec(),
-      DataType::F32 => self.registers[end - 4..end].to_vec(),
-      DataType::F64 => self.registers[end - 8..end].to_vec(),
-      DataType::Usize => self.registers[end - USIZE_LEN..end].to_vec(),
-    };
+    return self.registers[start..end].to_vec();
   }
 
   pub fn set_register(&mut self, register: u8, value: Vec<u8>) {

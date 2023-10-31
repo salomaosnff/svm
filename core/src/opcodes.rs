@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::{DataType, Value};
+use super::{Type, Value};
 
 const USIZE_LEN: usize = std::mem::size_of::<usize>();
 
@@ -59,7 +59,7 @@ pub enum OpCode {
   NoOperation,
   Halt,
   Move(u8, Value),
-  Register(u8, DataType),
+  Register(u8, Type),
   ProgramCounter,
   StackPointer,
 
@@ -68,35 +68,35 @@ pub enum OpCode {
   Push(Value),
   PushBytes(Vec<u8>),
   PushAll(Vec<Value>),
-  Pop(DataType, Option<u8>),
-  Copy(DataType),
+  Pop(Type, Option<u8>),
+  Copy(Type),
 
   // Arithmetic
-  Increment(DataType),
-  Decrement(DataType),
-  Add(DataType),
-  Subtraction(DataType),
-  Multiply(DataType),
-  Divide(DataType),
-  Modulo(DataType),
-  Negative(DataType),
-  Power(DataType),
+  Increment(Type),
+  Decrement(Type),
+  Add(Type),
+  Subtraction(Type),
+  Multiply(Type),
+  Divide(Type),
+  Modulo(Type),
+  Negative(Type),
+  Power(Type),
 
   // Bitwise
-  And(DataType),
-  Or(DataType),
-  XOr(DataType),
-  Not(DataType),
-  ShiftLeft(DataType),
-  ShiftRight(DataType),
+  And(Type),
+  Or(Type),
+  XOr(Type),
+  Not(Type),
+  ShiftLeft(Type),
+  ShiftRight(Type),
 
   // Comparison
-  Equals(DataType),
-  NotEquals(DataType),
-  GreaterThan(DataType),
-  GreaterThanOrEqual(DataType),
-  LessThan(DataType),
-  LessThanOrEqual(DataType),
+  Equals(Type),
+  NotEquals(Type),
+  GreaterThan(Type),
+  GreaterThanOrEqual(Type),
+  LessThan(Type),
+  LessThanOrEqual(Type),
 
   // Control Flow
   Jump(usize),
@@ -119,15 +119,16 @@ impl OpCode {
     match self {
       OpCode::NoOperation => vec![NOP],
       OpCode::Halt => vec![HALT],
-      OpCode::Move(a, b) => vec![SHIFT_LEFT]
+      OpCode::Move(register, value) => vec![MOVE]
         .into_iter()
-        .chain(a.to_be_bytes())
-        .chain(b.to_bytes())
+        .chain(register.to_be_bytes())
+        .chain(value.data_type().to_bytes())
+        .chain(value.to_bytes())
         .collect(),
       OpCode::Register(a, b) => vec![REGISTER]
         .into_iter()
-        .chain(a.to_be_bytes())
         .chain(b.to_bytes())
+        .chain(a.to_be_bytes())
         .collect(),
       OpCode::ProgramCounter => vec![PROGRAM_COUNTER],
       OpCode::StackPointer => vec![STACK_POINTER],
@@ -228,15 +229,15 @@ impl OpCode {
         .into_iter()
         .chain(a.to_bytes())
         .collect(),
-      OpCode::Goto => vec![JUMP],
-      OpCode::GotoIfZero => vec![JUMP_IF_ZERO],
-      OpCode::GotoIfNotZero => vec![JUMP_IF_NOT_ZERO],
-      OpCode::Jump(a) => vec![GOTO].into_iter().chain(a.to_be_bytes()).collect(),
-      OpCode::JumpIfZero(a) => vec![GOTO_IF_ZERO]
+      OpCode::Goto => vec![GOTO],
+      OpCode::GotoIfZero => vec![GOTO_IF_ZERO],
+      OpCode::GotoIfNotZero => vec![GOTO_IF_NOT_ZERO],
+      OpCode::Jump(a) => vec![JUMP].into_iter().chain(a.to_be_bytes()).collect(),
+      OpCode::JumpIfZero(a) => vec![JUMP_IF_ZERO]
         .into_iter()
         .chain(a.to_be_bytes())
         .collect(),
-      OpCode::JumpIfNotZero(a) => vec![GOTO_IF_NOT_ZERO]
+      OpCode::JumpIfNotZero(a) => vec![JUMP_IF_NOT_ZERO]
         .into_iter()
         .chain(a.to_be_bytes())
         .collect(),
@@ -253,8 +254,8 @@ impl OpCode {
       NOP => OpCode::NoOperation,
       HALT => OpCode::Halt,
       MOVE => {
-        let data_type = DataType::from_u8(bytes.remove(0));
         let reg = bytes.remove(0);
+        let data_type = Type::from_u8(bytes.remove(0));
 
         let value = Value::from_stack_bytes(bytes.clone(), &data_type);
 
@@ -263,7 +264,7 @@ impl OpCode {
         OpCode::Move(reg, value)
       }
       REGISTER => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let reg = bytes.remove(0);
 
         OpCode::Register(reg, data_type)
@@ -277,7 +278,7 @@ impl OpCode {
         OpCode::MoveStackPointer(value)
       }
       PUSH => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let value = Value::from_stack_bytes(bytes.clone(), &data_type);
 
         bytes.splice(0..data_type.size(), vec![]);
@@ -285,7 +286,7 @@ impl OpCode {
         OpCode::Push(value)
       }
       PUSH_ALL_U8 => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let count = bytes.remove(0);
 
         let values = bytes
@@ -298,7 +299,7 @@ impl OpCode {
         OpCode::PushAll(values)
       }
       PUSH_ALL_U16 => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let len = usize::from_be_bytes(
           bytes
             .splice(0..USIZE_LEN, vec![])
@@ -318,7 +319,7 @@ impl OpCode {
         OpCode::PushAll(values)
       }
       PUSH_ALL_U32 => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let len = usize::from_be_bytes(
           bytes
             .splice(0..USIZE_LEN, vec![])
@@ -338,7 +339,7 @@ impl OpCode {
         OpCode::PushAll(values)
       }
       PUSH_ALL_U64 => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let len = usize::from_be_bytes(
           bytes
             .splice(0..USIZE_LEN, vec![])
@@ -414,33 +415,33 @@ impl OpCode {
         OpCode::PushBytes(value)
       }
       POP => {
-        let data_type = DataType::from_u8(bytes.remove(0));
+        let data_type = Type::from_u8(bytes.remove(0));
         let reg = bytes.remove(0);
 
         OpCode::Pop(data_type, if reg == 0 { None } else { Some(reg) })
       }
-      COPY => OpCode::Copy(DataType::from_u8(bytes.remove(0))),
-      INCREMENT => OpCode::Increment(DataType::from_u8(bytes.remove(0))),
-      DECREMENT => OpCode::Decrement(DataType::from_u8(bytes.remove(0))),
-      ADD => OpCode::Add(DataType::from_u8(bytes.remove(0))),
-      SUBTRACTION => OpCode::Subtraction(DataType::from_u8(bytes.remove(0))),
-      MULTIPLY => OpCode::Multiply(DataType::from_u8(bytes.remove(0))),
-      DIVIDE => OpCode::Divide(DataType::from_u8(bytes.remove(0))),
-      MODULO => OpCode::Modulo(DataType::from_u8(bytes.remove(0))),
-      NEGATIVE => OpCode::Negative(DataType::from_u8(bytes.remove(0))),
-      POWER => OpCode::Power(DataType::from_u8(bytes.remove(0))),
-      AND => OpCode::And(DataType::from_u8(bytes.remove(0))),
-      OR => OpCode::Or(DataType::from_u8(bytes.remove(0))),
-      XOR => OpCode::XOr(DataType::from_u8(bytes.remove(0))),
-      NOT => OpCode::Not(DataType::from_u8(bytes.remove(0))),
-      SHIFT_LEFT => OpCode::ShiftLeft(DataType::from_u8(bytes.remove(0))),
-      SHIFT_RIGHT => OpCode::ShiftRight(DataType::from_u8(bytes.remove(0))),
-      EQUALS => OpCode::Equals(DataType::from_u8(bytes.remove(0))),
-      NOT_EQUALS => OpCode::NotEquals(DataType::from_u8(bytes.remove(0))),
-      GREATER_THAN => OpCode::GreaterThan(DataType::from_u8(bytes.remove(0))),
-      GREATER_THAN_OR_EQUAL => OpCode::GreaterThanOrEqual(DataType::from_u8(bytes.remove(0))),
-      LESS_THAN => OpCode::LessThan(DataType::from_u8(bytes.remove(0))),
-      LESS_THAN_OR_EQUAL => OpCode::LessThanOrEqual(DataType::from_u8(bytes.remove(0))),
+      COPY => OpCode::Copy(Type::from_u8(bytes.remove(0))),
+      INCREMENT => OpCode::Increment(Type::from_u8(bytes.remove(0))),
+      DECREMENT => OpCode::Decrement(Type::from_u8(bytes.remove(0))),
+      ADD => OpCode::Add(Type::from_u8(bytes.remove(0))),
+      SUBTRACTION => OpCode::Subtraction(Type::from_u8(bytes.remove(0))),
+      MULTIPLY => OpCode::Multiply(Type::from_u8(bytes.remove(0))),
+      DIVIDE => OpCode::Divide(Type::from_u8(bytes.remove(0))),
+      MODULO => OpCode::Modulo(Type::from_u8(bytes.remove(0))),
+      NEGATIVE => OpCode::Negative(Type::from_u8(bytes.remove(0))),
+      POWER => OpCode::Power(Type::from_u8(bytes.remove(0))),
+      AND => OpCode::And(Type::from_u8(bytes.remove(0))),
+      OR => OpCode::Or(Type::from_u8(bytes.remove(0))),
+      XOR => OpCode::XOr(Type::from_u8(bytes.remove(0))),
+      NOT => OpCode::Not(Type::from_u8(bytes.remove(0))),
+      SHIFT_LEFT => OpCode::ShiftLeft(Type::from_u8(bytes.remove(0))),
+      SHIFT_RIGHT => OpCode::ShiftRight(Type::from_u8(bytes.remove(0))),
+      EQUALS => OpCode::Equals(Type::from_u8(bytes.remove(0))),
+      NOT_EQUALS => OpCode::NotEquals(Type::from_u8(bytes.remove(0))),
+      GREATER_THAN => OpCode::GreaterThan(Type::from_u8(bytes.remove(0))),
+      GREATER_THAN_OR_EQUAL => OpCode::GreaterThanOrEqual(Type::from_u8(bytes.remove(0))),
+      LESS_THAN => OpCode::LessThan(Type::from_u8(bytes.remove(0))),
+      LESS_THAN_OR_EQUAL => OpCode::LessThanOrEqual(Type::from_u8(bytes.remove(0))),
       GOTO => OpCode::Goto,
       GOTO_IF_ZERO => OpCode::GotoIfZero,
       GOTO_IF_NOT_ZERO => OpCode::GotoIfNotZero,

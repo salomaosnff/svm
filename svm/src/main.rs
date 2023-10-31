@@ -26,5 +26,5 @@ fn main() {
 
   vm.run();
 
-  println!("Program terminated with stack: {:?}", vm.stack.data);
+  println!("Program terminated with stack: {:?}", vm.stack);
 }

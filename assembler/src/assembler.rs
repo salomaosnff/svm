@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::File, process::exit, vec};
 use svm_lang::{
   lexer::code::{self, Code},
   opcodes::OpCode,
-  DataType, Program, Value,
+  Program, Type, Value,
 };
 
 #[derive(Debug)]
@@ -121,7 +121,7 @@ impl AssemblerTokenizer {
         c if c.is_alphabetic() => {
           let text = self
             .code
-            .consume_while(|c| c.is_alphanumeric())
+            .consume_while(|c| c.is_alphanumeric() || *c == ':')
             .iter()
             .collect::<String>();
 
@@ -394,34 +394,47 @@ pub fn get_bool(operands: &mut Vec<Operand>) -> Option<Operand> {
 
 pub fn compile(file: File) -> Program {
   let mut labels = HashMap::new();
-  let mut tokens = AssemblerTokenizer {
+  let tokens = AssemblerTokenizer {
     code: code::from_file(file),
-  };
+  }
+  .collect::<Vec<InstructionToken>>();
   let mut opcodes: Vec<OpCode> = Vec::new();
   let mut registers = HashMap::new();
-
+  let mut pc = 0;
   registers.insert("addr", 0x01);
   registers.insert("a", 0x02);
   registers.insert("b", 0x03);
   registers.insert("c", 0x04);
 
-  while let Some(token) = tokens.next() {
+  for token in &tokens {
     match token {
       InstructionToken::Label(label) => {
-        labels.insert(label, opcodes.len());
+        labels.insert(label[0..label.len() - 1].to_string(), pc);
       }
+      InstructionToken::Opcode(_) => pc += 1,
+    }
+  }
+
+  for token in tokens {
+    match token {
+      InstructionToken::Label(_) => continue,
       InstructionToken::Opcode(mut opcode) => match opcode.mnemonic.as_str() {
         "NOP" => opcodes.push(OpCode::NoOperation),
         "HALT" => opcodes.push(OpCode::Halt),
         "MOV" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(&data_type),
+            Some(Operand::Type(data_type)) => Type::from_str(&data_type),
             _ => panic!("Expected type"),
           };
           let reg = match get_register(&mut opcode.operands) {
             Some(Operand::Register(register)) => register,
             _ => panic!("Expected register"),
           };
+
+          if opcode.operands.len() <= 0 {
+            panic!("Expected value");
+          }
+
           let value = match opcode.operands.remove(0) {
             Operand::Bool(b) => Value::Bool(match b.as_str() {
               "true" => true,
@@ -432,19 +445,19 @@ pub fn compile(file: File) -> Program {
             Operand::Label(label) => Value::Usize(
               labels
                 .get(label.as_str())
-                .expect("Label not found!")
+                .expect(format!("Label \"{}\" not found!", label).as_str())
                 .clone(),
             ),
             Operand::Number(number) => match data_type {
-              DataType::U8
-              | DataType::U16
-              | DataType::U32
-              | DataType::U64
-              | DataType::I8
-              | DataType::I16
-              | DataType::I32
-              | DataType::I64 => parse_number(number),
-              DataType::Bool => Value::Bool(match number.as_str() {
+              Type::U8
+              | Type::U16
+              | Type::U32
+              | Type::U64
+              | Type::I8
+              | Type::I16
+              | Type::I32
+              | Type::I64 => parse_number(number),
+              Type::Bool => Value::Bool(match number.as_str() {
                 "true" => true,
                 "false" => false,
                 _ => panic!("Expected boolean"),
@@ -469,13 +482,16 @@ pub fn compile(file: File) -> Program {
           };
 
           opcodes.push(OpCode::Move(
-            registers.get(reg.as_str()).unwrap().clone(),
+            registers
+              .get(reg.as_str())
+              .expect(format!("Register \"{}\" is invalid!", reg).as_str())
+              .clone(),
             value,
           ));
         }
         "REG" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(&data_type),
+            Some(Operand::Type(data_type)) => Type::from_str(&data_type),
             _ => panic!("Expected type"),
           };
           let reg = match get_register(&mut opcode.operands) {
@@ -504,20 +520,20 @@ pub fn compile(file: File) -> Program {
         }
         "PUSH" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(&data_type),
+            Some(Operand::Type(data_type)) => Type::from_str(&data_type),
             _ => {
               let mut operands = opcode
                 .operands
                 .iter()
                 .map(|n| match n {
                   Operand::Number(number) => parse_number(number.clone()).data_type(),
-                  Operand::Bool(_) => DataType::Bool,
-                  Operand::Char(_) => DataType::I32,
-                  Operand::Register(_) => DataType::Usize,
-                  Operand::String(_) => DataType::U8,
+                  Operand::Bool(_) => Type::Bool,
+                  Operand::Char(_) => Type::I32,
+                  Operand::Register(_) => Type::Usize,
+                  Operand::String(_) => Type::U8,
                   v => panic!("Invalid operand: {:?}", v),
                 })
-                .collect::<Vec<DataType>>();
+                .collect::<Vec<Type>>();
 
               operands.sort_by(|a, b| b.size().cmp(&a.size()));
 
@@ -526,16 +542,16 @@ pub fn compile(file: File) -> Program {
           };
 
           let to_data_type = match data_type {
-            DataType::U8
-            | DataType::U16
-            | DataType::U32
-            | DataType::U64
-            | DataType::I8
-            | DataType::I16
-            | DataType::I32
-            | DataType::I64
-            | DataType::Usize => |n: String| parse_number(n),
-            DataType::Bool => |n: String| {
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::Usize => |n: String| parse_number(n),
+            Type::Bool => |n: String| {
               Value::Bool(match n.as_str() {
                 "true" => true,
                 "false" => false,
@@ -569,7 +585,7 @@ pub fn compile(file: File) -> Program {
               Operand::Label(label) => stack_values.push(Value::Usize(
                 labels
                   .get(label.as_str())
-                  .expect("Label not found!")
+                  .expect(format!("Label \"{}\" not found!", label).as_str())
                   .clone(),
               )),
               Operand::Register(register) => stack_values.push(Value::U8(
@@ -595,8 +611,8 @@ pub fn compile(file: File) -> Program {
         }
         "POP" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           let reg = match get_register(&mut opcode.operands) {
@@ -616,175 +632,175 @@ pub fn compile(file: File) -> Program {
         }
         "COPY" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Copy(data_type));
         }
         "INC" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Increment(data_type));
         }
         "DEC" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Decrement(data_type));
         }
         "ADD" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Add(data_type));
         }
         "SUB" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Subtraction(data_type));
         }
         "MUL" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Multiply(data_type));
         }
         "DIV" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Divide(data_type));
         }
         "MOD" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
           opcodes.push(OpCode::Modulo(data_type));
         }
         "NEG" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Negative(data_type));
         }
         "POW" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Power(data_type));
         }
         "AND" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::And(data_type));
         }
         "OR" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Or(data_type));
         }
         "XOR" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::XOr(data_type));
         }
         "NOT" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Not(data_type));
         }
         "SHL" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::ShiftLeft(data_type));
         }
         "SHR" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::ShiftRight(data_type));
         }
         "EQ" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::Equals(data_type));
         }
         "NEQ" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::NotEquals(data_type));
         }
         "GT" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::GreaterThan(data_type));
         }
         "GTE" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::GreaterThanOrEqual(data_type));
         }
         "LT" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::LessThan(data_type));
         }
         "LTE" => {
           let data_type = match get_type(&mut opcode.operands) {
-            Some(Operand::Type(data_type)) => DataType::from_str(data_type.as_str()),
-            _ => DataType::I32,
+            Some(Operand::Type(data_type)) => Type::from_str(data_type.as_str()),
+            _ => Type::I32,
           };
 
           opcodes.push(OpCode::LessThanOrEqual(data_type));
@@ -798,7 +814,7 @@ pub fn compile(file: File) -> Program {
           opcodes.push(OpCode::Jump(
             labels
               .get(label.as_str())
-              .expect("Label not found!")
+              .expect(format!("Label \"{}\" not found!", label).as_str())
               .clone(),
           ));
         }
@@ -811,7 +827,7 @@ pub fn compile(file: File) -> Program {
           opcodes.push(OpCode::JumpIfZero(
             labels
               .get(label.as_str())
-              .expect("Label not found!")
+              .expect(format!("Label \"{}\" not found!", label).as_str())
               .clone(),
           ));
         }
@@ -824,7 +840,7 @@ pub fn compile(file: File) -> Program {
           opcodes.push(OpCode::JumpIfNotZero(
             labels
               .get(label.as_str())
-              .expect("Label not found!")
+              .expect(format!("Label \"{}\" not found!", label).as_str())
               .clone(),
           ));
         }
