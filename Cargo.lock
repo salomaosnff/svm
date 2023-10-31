@@ -3,5 +3,35 @@
 version = 3
 
 [[package]]
-name = "lang"
+name = "svm"
 version = "0.1.0"
+dependencies = [
+ "svm_lang",
+ "svm_vm",
+]
+
+[[package]]
+name = "svm_asm"
+version = "0.1.0"
+dependencies = [
+ "svm_lang",
+]
+
+[[package]]
+name = "svm_lang"
+version = "0.1.0"
+
+[[package]]
+name = "svm_vm"
+version = "0.1.0"
+dependencies = [
+ "svm_lang",
+]
+
+[[package]]
+name = "svmc"
+version = "0.1.0"
+dependencies = [
+ "svm_asm",
+ "svm_lang",
+]

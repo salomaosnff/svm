@@ -1,12 +1,12 @@
-[package]
-name = "lang"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["svmc", "core", "vm", "assembler", "svm"]
+exclude = ["example"]
+resolver = "2"
 
 [profile.dev]
-opt-level = 3
+opt-level = 0
 debug=false
 
-[dependencies]
+[profile.release]
+opt-level = 3
+debug=false

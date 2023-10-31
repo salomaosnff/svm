@@ -1,4 +1,6 @@
-use crate::lang::assembler::{DataType, StackValue, USIZE_LEN};
+const USIZE_LEN: usize = std::mem::size_of::<usize>();
+
+use svm_lang::{DataType, Value};
 
 use super::util::vm_panic;
 
@@ -64,60 +66,14 @@ impl Stack {
       DataType::F64 => self.read_bytes(8),
       DataType::Usize => self.read_bytes(std::mem::size_of::<usize>()),
       DataType::Bool => self.read_bytes(1),
-      DataType::Char => self.read_bytes(std::mem::size_of::<char>()),
-      DataType::String => {
-        let mut index = self.sp - 1;
-
-        while self.data[index] != 0 {
-          index -= 1;
-        }
-
-        return self.read_bytes(self.sp - index);
-      }
-      DataType::Record(key_type, value_type) => {
-        self.save();
-
-        let usize_len = std::mem::size_of::<usize>();
-        let mut range = self.sp - usize_len..self.sp;
-        let size_buffer = self.peek(&DataType::Usize);
-        let size = usize::from_ne_bytes(size_buffer[0..usize_len].try_into().unwrap());
-
-        self.sp -= usize_len;
-
-        for _ in 0..size {
-          let value = self.peek(value_type);
-          let value_size = value.len();
-
-          self.sp -= value_size;
-
-          let key = self.peek(key_type);
-          let key_size = key.len();
-
-          self.sp -= key_size;
-
-          range.start = self.sp;
-        }
-
-        self.restore();
-
-        return &self.data[range];
-      }
-      DataType::Buffer => {
-        let buffer_size = match self.pop_value(&DataType::Usize) {
-          StackValue::Usize(value) => value,
-          _ => unreachable!(),
-        };
-
-        return &self.data[self.sp - buffer_size..self.sp];
-      }
     }
   }
 
-  pub fn peek_value(&mut self, item_type: &DataType) -> StackValue {
-    return StackValue::from_stack_bytes(self.peek(item_type).to_vec(), item_type);
+  pub fn peek_value(&mut self, item_type: &DataType) -> Value {
+    return Value::from_stack_bytes(self.peek(item_type).to_vec(), item_type);
   }
 
-  pub fn push_value(&mut self, value: StackValue) {
+  pub fn push_value(&mut self, value: Value) {
     self.push(value.to_bytes());
   }
 
@@ -157,8 +113,8 @@ impl Stack {
     return result;
   }
 
-  pub fn pop_value(&mut self, item_type: &DataType) -> StackValue {
-    return StackValue::from_stack_bytes(self.pop(item_type), item_type);
+  pub fn pop_value(&mut self, item_type: &DataType) -> Value {
+    return Value::from_stack_bytes(self.pop(item_type), item_type);
   }
 
   pub fn set_sp(&mut self, offset: usize) {
@@ -201,17 +157,6 @@ impl Stack {
       DataType::F32 => self.registers[end - 4..end].to_vec(),
       DataType::F64 => self.registers[end - 8..end].to_vec(),
       DataType::Usize => self.registers[end - USIZE_LEN..end].to_vec(),
-      DataType::Char => self.registers[end - USIZE_LEN..end].to_vec(),
-      DataType::String => {
-        let mut index = end;
-
-        while self.registers[index] != 0 {
-          index -= 1;
-        }
-
-        return self.registers[index + 1..end].to_vec();
-      }
-      _ => panic!("Cannot peek {item_type} from register!"),
     };
   }
 
