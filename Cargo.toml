@@ -1,5 +1,5 @@
 [workspace]
-members = ["svmc", "core", "vm", "assembler", "svm"]
+members = ["svmc", "core", "runtime", "assembler", "svm", "std"]
 exclude = ["example"]
 resolver = "2"
 

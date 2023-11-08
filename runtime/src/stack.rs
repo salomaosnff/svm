@@ -68,6 +68,25 @@ impl Stack {
       Type::Usize => self.read_bytes(USIZE_LEN),
       Type::Isize => self.read_bytes(ISIZE_LEN),
       Type::Bool => self.read_bytes(1),
+      Type::String => {
+        let mut len = 1;
+
+        while let Some(byte) = self.data.get(self.sp - len) {
+          if *byte == 0 || len == self.sp {
+            break;
+          }
+
+          len += 1;
+        }
+
+        let bytes = self.read_bytes(len);
+
+        return bytes;
+      }
+      Type::Bytes => {
+        let size = usize::from_le_bytes(self.read_bytes(USIZE_LEN).try_into().unwrap());
+        return self.read_bytes(size);
+      }
     }
   }
 
@@ -117,6 +136,14 @@ impl Stack {
 
   pub fn pop_value(&mut self, item_type: &Type) -> Value {
     return Value::from_stack_bytes(self.pop(item_type), item_type);
+  }
+
+  pub fn pop_type(&mut self) -> Type {
+    let item_type = self.data.pop().expect("Cannot pop from empty stack!");
+
+    self.sp -= 1;
+
+    return Type::from_u8(item_type);
   }
 
   pub fn set_sp(&mut self, offset: usize) {

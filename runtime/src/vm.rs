@@ -1,44 +1,41 @@
-use std::{fmt::Debug, process::exit};
+use std::{collections::HashMap, time::Duration};
 
 use svm_lang::{opcodes::OpCode, Program, Type, Value};
 
-use crate::stdio::{Stderr, Stdin, Stdout};
-
 use super::{util::vm_panic, Stack};
 
-pub trait IO {
-  fn read(&mut self, buffer: &mut [u8]);
-  fn write(&mut self, buffer: &[u8]);
-}
-
-impl Debug for dyn IO {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "<IO>")
-  }
-}
-
-#[derive(Debug)]
-pub struct VM {
+pub struct VM<'a> {
   pub stack: Stack,
   pub program: Program,
   pub pc: usize,
   pub running: bool,
-  pub io: Vec<Box<dyn IO>>,
+  pub sleep: Duration,
+  pub externs: HashMap<usize, &'a dyn Fn(&mut VM) -> Option<Value>>,
 }
 
-impl VM {
+impl<'a> VM<'a> {
   pub fn new() -> Self {
     Self {
       stack: Stack::new(1024),
+      sleep: Duration::ZERO,
       program: Program::empty(),
       pc: 0,
       running: false,
-      io: vec![Box::new(Stdin), Box::new(Stdout), Box::new(Stderr)],
+      externs: HashMap::new(),
     }
   }
 
-  pub fn add_io<T: IO + 'static>(&mut self, io: T) {
-    self.io.push(Box::new(io));
+  pub fn load_plugin<F: FnMut(&mut VM) -> ()>(&mut self, mut plugin: F) {
+    plugin(self);
+  }
+
+  pub fn register_extern(&mut self, addr: usize, ext: &'a dyn Fn(&mut VM) -> Option<Value>) {
+    if self.externs.contains_key(&addr) {
+      vm_panic("InvalidExtern", "Extern already registered");
+      return;
+    }
+
+    self.externs.insert(addr, ext);
   }
 
   pub fn run(&mut self) {
@@ -99,20 +96,22 @@ impl VM {
         OpCode::PushBytes(bytes) => self.push_bytes(bytes),
       };
 
-      std::thread::sleep(std::time::Duration::from_millis(500));
+      // println!(
+      //   "\x1bcPC={}\nSP={}\nSTACK: {:?}\nREGISTERS: {:?}\nINSTRUCTION: {:?}\n",
+      //   self.pc,
+      //   self.stack.sp,
+      //   self.stack.data,
+      //   self
+      //     .stack
+      //     .registers
+      //     .chunks_exact(std::mem::size_of::<usize>())
+      //     .collect::<Vec<_>>(),
+      //   op,
+      // );
 
-      println!(
-        "\x1bcPC={}\nSP={}\nSTACK: {:?}\nREGISTERS: {:?}\nINSTRUCTION: {:?}\n",
-        self.pc,
-        self.stack.sp,
-        self.stack.data,
-        self
-          .stack
-          .registers
-          .chunks_exact(std::mem::size_of::<usize>())
-          .collect::<Vec<_>>(),
-        op,
-      );
+      if self.sleep > Duration::ZERO {
+        std::thread::sleep(self.sleep);
+      }
     }
   }
 
@@ -732,12 +731,19 @@ impl VM {
     self.stack.push(value);
   }
 
-  fn call(&mut self, addr: usize) {
+  fn call(&mut self, _addr: usize) {
     todo!()
   }
 
   fn external(&mut self, addr: usize) {
-    todo!()
+    let external_function = *self
+      .externs
+      .get_mut(&addr)
+      .expect("External function not found");
+
+    if let Some(returned_value) = external_function(self) {
+      self.stack.push_value(returned_value);
+    }
   }
 
   fn ret(&mut self) {

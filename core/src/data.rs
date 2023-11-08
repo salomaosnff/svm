@@ -19,6 +19,7 @@ pub enum Value {
   Usize(usize),
   Isize(isize),
   Bytes(Vec<u8>),
+  String(String),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -36,6 +37,8 @@ pub enum Type {
   F64,
   Usize,
   Isize,
+  String,
+  Bytes,
 }
 
 impl Display for Type {
@@ -53,6 +56,8 @@ impl Type {
       Type::U64 | Type::I64 | Type::F64 => 8,
       Type::Usize => USIZE_LEN,
       Type::Isize => ISIZE_LEN,
+      Self::Bytes => panic!("Cannot get size of Bytes"),
+      Self::String => panic!("Cannot get size of String"),
     }
   }
 
@@ -70,6 +75,8 @@ impl Type {
       "f32" => Type::F32,
       "f64" => Type::F64,
       "usize" => Type::Usize,
+      "str" => Type::String,
+      "bytes" => Type::Bytes,
       _ => panic!("Unknown data type: {}", str),
     };
   }
@@ -89,6 +96,8 @@ impl Type {
       Type::F64 => String::from("f64"),
       Type::Usize => String::from("usize"),
       Type::Isize => String::from("isize"),
+      Type::String => String::from("str"),
+      Type::Bytes => String::from("bytes"),
     };
   }
 
@@ -107,6 +116,8 @@ impl Type {
       Type::Usize => vec![0x0A],
       Type::Bool => vec![0x0C],
       Type::Isize => vec![0x0D],
+      Type::String => vec![0x0E],
+      Type::Bytes => vec![0x0F],
     };
   }
 
@@ -125,6 +136,8 @@ impl Type {
       0x0A => Type::Usize,
       0x0C => Type::Bool,
       0x0D => Type::Isize,
+      0x0E => Type::String,
+      0x0F => Type::Bytes,
       _ => panic!("Unknown type_code: [0x{:x}]", code),
     };
   }
@@ -154,26 +167,53 @@ impl Value {
       Value::Usize(value) => value.to_be_bytes().to_vec(),
       Value::Isize(value) => value.to_be_bytes().to_vec(),
       Value::Bytes(value) => value.clone(),
+      Value::String(value) => value.clone().into_bytes(),
     };
   }
 
   pub fn from_stack_bytes(data: Vec<u8>, data_type: &Type) -> Self {
-    let size = data_type.clone().size();
-
     return match data_type {
-      Type::U8 => Value::U8(u8::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::I8 => Value::I8(i8::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::U16 => Value::U16(u16::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::I16 => Value::I16(i16::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::U32 => Value::U32(u32::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::I32 => Value::I32(i32::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::U64 => Value::U64(u64::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::I64 => Value::I64(i64::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::F32 => Value::F32(f32::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::F64 => Value::F64(f64::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::Usize => Value::Usize(usize::from_be_bytes(data[0..size].try_into().unwrap())),
-      Type::Isize => Value::Isize(isize::from_be_bytes(data[0..size].try_into().unwrap())),
+      Type::U8 => Value::U8(u8::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::I8 => Value::I8(i8::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::U16 => Value::U16(u16::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::I16 => Value::I16(i16::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::U32 => Value::U32(u32::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::I32 => Value::I32(i32::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::U64 => Value::U64(u64::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::I64 => Value::I64(i64::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::F32 => Value::F32(f32::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::F64 => Value::F64(f64::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::Usize => Value::Usize(usize::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
+      Type::Isize => Value::Isize(isize::from_be_bytes(
+        data[0..data_type.clone().size()].try_into().unwrap(),
+      )),
       Type::Bool => Value::Bool(data[0] != 0),
+      Type::String => {
+        return Value::String(String::from_utf8(data[1..].to_vec()).unwrap());
+      }
+      Type::Bytes => Value::Bytes(data),
     };
   }
 
@@ -196,7 +236,8 @@ impl Value {
       Value::F64(_) => Type::F64,
       Value::Usize(_) => Type::Usize,
       Value::Isize(_) => Type::Isize,
-      Value::Bytes(_) => panic!("Cannot get data type of bytes"),
+      Value::Bytes(_) => Type::Bytes,
+      Value::String(_) => Type::String,
     };
   }
 }

@@ -33,7 +33,7 @@ pub struct AssemblerTokenizer {
   code: Code,
 }
 
-fn parse_number(number: String) -> Value {
+fn to_number_digits(number: String) -> (String, u32) {
   let base = if number.starts_with("-0x") || number.starts_with("0x") {
     16
   } else if number.starts_with("-0b") || number.starts_with("0b") {
@@ -56,6 +56,20 @@ fn parse_number(number: String) -> Value {
     String::new() + &number[2..]
   };
 
+  return (digits, base);
+}
+
+fn parse_and_infer_number_type(number: String) -> Value {
+  if number == "true" || number == "false" {
+    return Value::Bool(match number.as_str() {
+      "true" => true,
+      "false" => false,
+      _ => panic!("Expected boolean"),
+    });
+  }
+
+  let (digits, base) = to_number_digits(number);
+
   if digits.starts_with("-") {
     return i8::from_str_radix(&digits, base)
       .map(|x| Value::I8(x as i8))
@@ -71,6 +85,55 @@ fn parse_number(number: String) -> Value {
     .or_else(|_| u32::from_str_radix(&digits, base).map(|x| Value::U32(x as u32)))
     .or_else(|_| u64::from_str_radix(&digits, base).map(|x| Value::U64(x as u64)))
     .expect("Invalid number");
+}
+
+fn parse_value(value: String, number_type: Option<Type>) -> Value {
+  if number_type.is_none() {
+    return parse_and_infer_number_type(value);
+  }
+
+  let number_type = number_type.unwrap();
+
+  let (digits, base) = to_number_digits(value.clone());
+
+  if digits.starts_with("-") {
+    return match number_type {
+      Type::I8 => i8::from_str_radix(&digits, base)
+        .map(|x| Value::I8(x as i8))
+        .expect("Invalid number"),
+      Type::I16 => i16::from_str_radix(&digits, base)
+        .map(|x| Value::I16(x as i16))
+        .expect("Invalid number"),
+      Type::I32 => i32::from_str_radix(&digits, base)
+        .map(|x| Value::I32(x as i32))
+        .expect("Invalid number"),
+      Type::I64 => i64::from_str_radix(&digits, base)
+        .map(|x| Value::I64(x as i64))
+        .expect("Invalid number"),
+      _ => panic!("Invalid number type"),
+    };
+  }
+
+  return match number_type {
+    Type::Bool => Value::Bool(match value.as_str() {
+      "true" => true,
+      "false" => false,
+      _ => panic!("Expected boolean"),
+    }),
+    Type::U8 => u8::from_str_radix(&digits, base)
+      .map(|x| Value::U8(x as u8))
+      .expect("Invalid number"),
+    Type::U16 => u16::from_str_radix(&digits, base)
+      .map(|x| Value::U16(x as u16))
+      .expect("Invalid number"),
+    Type::U32 => u32::from_str_radix(&digits, base)
+      .map(|x| Value::U32(x as u32))
+      .expect("Invalid number"),
+    Type::U64 => u64::from_str_radix(&digits, base)
+      .map(|x| Value::U64(x as u64))
+      .expect("Invalid number"),
+    _ => panic!("Invalid number type"),
+  };
 }
 
 fn to_isize(number: Value) -> isize {
@@ -302,6 +365,8 @@ impl AssemblerTokenizer {
                       '0' => text.push('\0'),
                       c => text.push(c),
                     }
+
+                    continue;
                   }
 
                   text.push(ch);
@@ -456,7 +521,7 @@ pub fn compile(file: File) -> Program {
               | Type::I8
               | Type::I16
               | Type::I32
-              | Type::I64 => parse_number(number),
+              | Type::I64 => parse_and_infer_number_type(number),
               Type::Bool => Value::Bool(match number.as_str() {
                 "true" => true,
                 "false" => false,
@@ -512,7 +577,7 @@ pub fn compile(file: File) -> Program {
         }
         "MSP" => {
           let offset = match get_number(&mut opcode.operands) {
-            Some(Operand::Number(number)) => to_isize(parse_number(number)),
+            Some(Operand::Number(number)) => to_isize(parse_and_infer_number_type(number)),
             _ => panic!("Expected number"),
           };
 
@@ -526,7 +591,9 @@ pub fn compile(file: File) -> Program {
                 .operands
                 .iter()
                 .map(|n| match n {
-                  Operand::Number(number) => parse_number(number.clone()).data_type(),
+                  Operand::Number(number) => {
+                    parse_and_infer_number_type(number.clone()).data_type()
+                  }
                   Operand::Bool(_) => Type::Bool,
                   Operand::Char(_) => Type::I32,
                   Operand::Register(_) => Type::Usize,
@@ -550,14 +617,8 @@ pub fn compile(file: File) -> Program {
             | Type::I16
             | Type::I32
             | Type::I64
-            | Type::Usize => |n: String| parse_number(n),
-            Type::Bool => |n: String| {
-              Value::Bool(match n.as_str() {
-                "true" => true,
-                "false" => false,
-                _ => panic!("Expected boolean"),
-              })
-            },
+            | Type::Bool
+            | Type::Usize => |n: String| parse_value(n, Some(data_type.clone())),
             _ => panic!("Unknown data type {data_type}"),
           };
 
@@ -608,6 +669,14 @@ pub fn compile(file: File) -> Program {
             }
           }
           write_operands(&mut opcodes, &mut stack_values);
+        }
+        "TYPE" => {
+          let data_type = match get_type(&mut opcode.operands) {
+            Some(Operand::Type(data_type)) => Type::from_str(&data_type),
+            _ => panic!("Expected type"),
+          };
+
+          opcodes.push(OpCode::Push(Value::U8(data_type.to_bytes()[0])));
         }
         "POP" => {
           let data_type = match get_type(&mut opcode.operands) {
@@ -855,7 +924,7 @@ pub fn compile(file: File) -> Program {
         }
         "EXT" => {
           let address = match get_number(&mut opcode.operands) {
-            Some(Operand::Number(number)) => to_usize(parse_number(number)),
+            Some(Operand::Number(number)) => to_usize(parse_and_infer_number_type(number)),
             _ => panic!("Expected address"),
           };
 
@@ -863,7 +932,7 @@ pub fn compile(file: File) -> Program {
         }
         "CALL" => {
           let address = match get_number(&mut opcode.operands) {
-            Some(Operand::Number(number)) => to_usize(parse_number(number)),
+            Some(Operand::Number(number)) => to_usize(parse_and_infer_number_type(number)),
             _ => panic!("Expected address"),
           };
 

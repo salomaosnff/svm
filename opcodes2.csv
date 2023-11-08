@@ -12,6 +12,7 @@ PUSH_u16;Stack;PUSH_u16 [size:u16] [type] [...items:type];Empilha até 2^16-1 it
 PUSH_u32;Stack;PUSH_u32 [size:u32] [type] [...items:type];Empilha até 2^32-1 itens do tipo <type>;[*type]
 PUSH_u64;Stack;PUSH_u64 [size:u64] [type] [...items:type];Empilha até 2^64-1 itens do tipo <type>;[*type]
 PUSH_BYTES;Stack;PUSH_bytes [size:usize] [...items:u8];Empilha até <size> bytes;[*u8]
+PUSH_ARG;Stack;PUSH_ARG [type] [value:type];Empilha um argumento do tipo <type> na pilha;[+type,+u8]
 POP;Stack;POP [type] [reg:u8];Desempilha um valor do tipo <type> e move para o registrador <reg>;[-type]
 COPY;Stack;COPY [type] [reg:u8];Copia um valor do tipo <type> da pilha para um registrador;
 INC;Stack;INC [type] [reg:u8];Incrementa um valor do tipo <type> na pilha;[-type,+type]

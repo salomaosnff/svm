@@ -1,12 +1,21 @@
-MOV   u8 %a 5
-PUSH  u8 1
+MOV   u64 %a 20
+PUSH  u64 1
 loop:
-REG   u8 %a
-MUL   u8
-REG   u8 %a
-DEC   u8
-COPY  u8
-POP   u8 %a
-PUSH  u8 1
-GT    u8
+REG   u64 %a
+MUL   u64
+REG   u64 %a
+DEC   u64
+COPY  u64
+POP   u64 %a
+PUSH  u64 1
+GT    u64
 JNZ   .loop
+
+; Print the result
+TYPE  u64
+EXT   0
+
+; Print a newline
+PUSH "\n"
+TYPE  str
+EXT   0

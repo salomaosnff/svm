@@ -1,7 +1,7 @@
 use std::{fs::File, process::exit};
 
 use svm_lang::Program;
-use svm_vm::VM;
+use svm_runtime::VM;
 
 fn open_file(file: String) -> File {
   if let Ok(file) = File::open(file.clone()) {
@@ -21,6 +21,8 @@ fn main() {
   }
 
   let mut vm = VM::new();
+
+  vm.load_plugin(svm_std::stdio_plugin);
 
   vm.program = Program::from_file(open_file(args.get(1).unwrap().clone()));
 
